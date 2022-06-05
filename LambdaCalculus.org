@@ -1,0 +1,120 @@
+#+title: Lambda Calculus
+#+author: Joash Naidoo
+
+* What is it?
+
+Lambda calculus is a model of computation developed by Alonzo Church. A model of computation describes how a function produces an output given an input.
+
+Extremely well made lecture on lambda calculus and how we can represent data as procedures (i.e. functions)
+  - Part 1: https://www.youtube.com/watch?v=3VQ382QG-y4
+  - Part 2: https://www.youtube.com/watch?v=pAnLQ9jwN-E
+
+* Rules for defining the lambda calculus
+
+- Variables (identifiers and are immutable)
+- Expressions
+- Abstraction (e.g. anonomous function takes on input returns one output)
+  - Syntax is $\lambda x . x$
+- Groupings
+  - Syntax: brackets
+
+* Basic functions
+
+#+begin_src racket :session lambda
+#lang racket
+
+; \lambda x . x
+; Identity function which takes x and returns x
+(define I
+  (lambda (x) x))
+
+; \lambda x . xx
+; Mocking bird function takes x and calls it on itself
+(define M
+  (lambda (x) (x x)))
+
+; \lambda a b . a
+; Kestrel function which takes parameters a THEN b but only returns a
+(define K
+  (lambda (a) (lambda (b) a)))
+
+; \lambda a b . b
+; Kite function; like Kestrel but returns b
+(define KI
+  (lambda (a) (lambda (b) b)))
+
+; \lambda f a b . f b a
+; Cardinal function takes function arguments a and b but returns f applied to b then a
+; remember f on a returns a function which is then applied on b
+(define C
+  (lambda (f)
+    (lambda (a)
+      (lambda (b) ((f b) a) ))))
+
+#+end_src
+
+#+RESULTS:
+
+* Representing logic
+
+No boolean primatives are used in lambda calculus. Everything is expressed as functions
+
+#+begin_src racket :session lambda
+#lang racket
+
+(define K
+  (lambda (a) (lambda (b) a)))
+(define KI
+  (lambda (a) (lambda (b) b)))
+(define C
+  (lambda (f)
+    (lambda (a)
+      (lambda (b) ((f b) a) ))))
+
+; Consider:
+; bool ? <expression> : <expression>
+
+; True is a function which returns the first expression
+; Equivalent to the Kestrel function
+(define T K)
+
+; False is a function which return the second expression
+; Equivalent to the Kite function
+(define F KI)
+
+(define not
+  (lambda (p) (p (F T))))
+
+(define and
+  (lambda (p) (lambda (q) (p (q p)) )))
+
+(not T)
+(not F)
+(and (T F))
+#+end_src
+
+#+RESULTS:
+: #<procedure:...j9lKr/ob-LoXyNf.rkt:4:14>
+: #<procedure:...j9lKr/ob-LoXyNf.rkt:6:14>
+: #<procedure:...j9lKr/ob-LoXyNf.rkt:27:14>
+
+
+* Representing data
+
+** Numerals
+
+No number primitive data types. Just functions
+
+#+begin_src racket
+#lang racket
+
+; first define zero then every whole number thereafter is the successor of previous whole number - Pelo's Numbers
+
+; ZERO := \lambda x y . y
+(define (zero) (lambda (x) (lambda (y) y)))
+
+(zero)
+#+end_src
+
+#+RESULTS:
+: #<procedure:...aYz4s/ob-kqKIGd.rkt:3:15>

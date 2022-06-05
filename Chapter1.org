@@ -1,0 +1,560 @@
+#+title: Sicp Notes: Chapter 1
+#+author: Joash Naidoo
+#+header: :session
+
+* Chapter 1.1
+
+** Difference between applicative order and normal order evaluation
+
+Additional Resource: https://sookocheff.com/post/fp/evaluating-lambda-expressions/
+
+Consider:
+
+#+begin_src scheme
+(define (double x) (+ x x)
+(define (average x y) /(+ x y) 2)
+
+(double (average 2 4))
+#+end_src
+
+*** Normal order
+
+Instead it would first substitute operand expressions for parameters
+until it obtained an expression involving only primitive operators, and
+would then perform the evaluation.
+
+Expression is fully expanded then reduced
+#+begin_src scheme
+(double average(2 4))
+(+ (average 2 4) (average 2 4))
+(+ (/ (+ 2 4) 2) (/ (+ 2 4) 2))
+
+; Then start reducing
+#+end_src
+
+*** Applicative order
+
+The interpreter first evaluates the operator and operands and
+then applies the resulting procedure to the resulting arguments.
+#+begin_src scheme
+(double (average 2 4))
+(double (/ (+ 2 4) 2))
+
+; Then start reducing
+#+end_src
+
+*** Other notes
+
+**** There are cases when evaluation order does not return the same result
+**** Lisp uses application order as it provides better efficiency
+
+
+** Conditionals
+
+*** Predicate: name given to procedures which return either true or false
+*** If keyword is a special form in Lisp
+**** A special form is does not follow the normal rules of evaluation
+*** Logic composition operations (and, or and not) construct compound predicates
+**** And and Or are special forms
+**** Not is a procedure
+
+* Exercises
+
+** 1.1
+10
+12
+3
+6
+
++ 3 (+ 3 1) (* 3 (+ 3 1)) = + 3 4 (* 3 4) = + 3 4 12 = 19
+false
+...
+
+
+** 1.2
+#+begin_src racket :results output
+#lang racket
+(/ (+ 5 4 (- 2 (- 3 (+ 6 (/ 4 5)))))
+    (* 3 (- 6 2) (- 2 7)))
+#+end_src
+
+#+RESULTS:
+: -37/150
+
+
+** 1.3
+
+#+begin_src racket :tangle yes :noweb yes :results output
+; Procedure to print the square of the highest two numbers
+#lang racket
+
+(define (square x) (* x x))
+(define (sum-squares x y) (+ (square x) (square y)))
+
+(define (sum-greatest-two-squares a b c) (cond
+[(and (< a b) (< a c)) (sum-squares b c)]; print b and c
+; else
+[(and (< b a) (< b c)) (sum-squares a c)]; print a and c
+; else
+[(and (< c a) (< c b)) (sum-squares a b)] )); print a and b
+
+(sum-greatest-two-squares 1 2 3)
+(sum-greatest-two-squares 4 2 3)
+(sum-greatest-two-squares 4 5 3)
+
+#+end_src
+
+#+RESULTS:
+: 13
+: 25
+: 41
+
+
+** 1.4
+
+
+** 1.5
+
+
+** 1.6 Why does if have to be a special form
+
+* Chapter 1.2
+
+** Recursive Procedure: Specifically a procedure which directly/indirectly refers to itself
+** Recursive process: Specifically how the process evolves. Process builds a chain of deferred operations
+*** Is not the same as a recursive procedure
+** Linear iterative process: Has a complete description of the state of the process at any point (i.e. fixed number of state variables)
+
+Example of a iterative process with recursive procedure:
+
+#+begin_src racket :results output
+#lang racket
+
+(define (fact-iter product i max-count)
+  (if (> i max-count)
+      product
+      (fact-iter (* i product) (+ i 1) max-count )))
+
+(define (factorial n) (fact-iter 1 1 n))
+
+(factorial 5)
+#+end_src
+
+#+RESULTS:
+: 120
+
+** Tree recursion
+*** Recursion with multiple branches
+*** In general number of steps is proportional to nodes in the tree
+*** Space is proportional to depth of the tree
+*** Counting change example
+
+#+begin_src racket :results output
+#lang racket
+
+
+#+end_src
+
+** Exponentiation
+
+n * n * n * ...
+
+#+begin_src racket :results output
+#lang racket
+
+; computing b^n
+
+(define (iter b i product)
+  (if (= i 0) product (iter b (- i 1) (* b product)) ))
+
+; computing b^n
+
+(define (even? n) (= (remainder n 2) 0))
+(define (square n) (* n n))
+(define (fast-iter b n)
+  (cond ((= n 0) 1)
+        ((even? n) (square (fast-iter b (/ n 2) )))
+        (else (* b (fast-iter b (- n 1))))  ))
+
+
+(define (expt b n) (iter b n 1))
+(define (fast-expt b n) (fast-iter b n))
+
+(expt 2 4)
+(fast-expt 2 4)
+#+end_src
+
+#+RESULTS:
+: 16
+: 16
+
+*** Exercise 1.16
+#+begin_src racket :results output
+#lang racket
+
+(define (even? n) (= (remainder n 2) 0))
+(define (expo b n a)
+  (cond ((= n 0) 1)
+        ((= n 1) a)
+        (else )))
+
+(square 2 4 1)
+#+end_src
+
+*** Exercise 1.17
+
+#+begin_src racket
+#lang racket
+
+(define (even? n) (= (remainder n 2) 0))
+(define (double x) (+ x x))
+(define (half x)
+  (if (even? x)
+      (/ x 2)
+      x))
+
+; multiplication with addition in log steps
+(define (mult a b)
+  (cond ((= b 1) a)
+        ((even? b) (mult (double a) (half b)))
+        (else (+ a (mult a (- b 1))))))
+
+(mult 4 4)
+(mult 3 5)
+#+end_src
+
+#+RESULTS:
+: 16
+: 15
+
+** Greatest common divisors
+
+#+begin_src racket :results output
+#lang racket
+
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (remainder a b))))
+
+(gcd 4 5)
+#+end_src
+
+#+RESULTS:
+: 1
+
+** Testing for primality
+
+#+begin_src racket :results output
+#lang racket
+
+(define (square x) (* x x))
+(define (divides? a b) (= (remainder b a) 0))
+
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divides? test-divisor n) test-divisor)
+        (else (find-divisor n (+ test-divisor 1)))))
+
+(define (smallest-divisor n) (find-divisor n 2))
+
+(define (prime? n) (= n (smallest-divisor n)))
+
+(prime? 5)
+(prime? 4)
+#+end_src
+
+#+RESULTS:
+: #t
+: #f
+
+** Procedures as Arguments
+
+*** Exercise 1.30
+
+#+begin_src racket :results output
+#lang racket
+
+(define (sum term a next b)
+  (define (iter a result)
+    (if (> a b)
+        result
+        (iter (next a) (+ (term a) result)) ))
+  (iter a 0))
+
+(define (inc a) (+ a 1))
+(define (sum-basic a) (+ a 1))
+
+(sum sum-basic 1 inc 5)
+#+end_src
+
+#+RESULTS:
+: 20
+
+*** Exercise 1.31 a)
+
+#+begin_src racket :results output
+#lang racket
+
+(define (product term a next b)
+  (define (iter a result)
+    (if (> a b)
+    result
+    (iter (next a) (* (term a) result)) ))
+  (iter a 1))
+
+(define (inc a) (+ a 1))
+(define (product-basic a) a)
+
+(product product-basic 1 inc 5)
+#+end_src
+
+#+RESULTS:
+: 120
+
+*** Exercise 1.31 b)
+
+#+begin_src racket :results output
+
+#+end_src
+
+*** Exercise 1.32 a)
+
+#+begin_src racket :results output
+#lang racket
+
+(define (accumulate combinator null-value term a next b)
+(define (iter a result)
+  (if (> a b)
+      result
+      (iter (next a) (combinator (term a) result))))
+    (iter a null-value))
+
+(define (inc a) (+ a 1))
+(define (basic-term a) a)
+
+(accumulate + 0 basic-term 1 inc 5)
+(accumulate * 1 basic-term 1 inc 5)
+
+#+end_src
+
+#+RESULTS:
+: 15
+: 120
+
+*** Exercise 1.33
+
+#+begin_src racket :results output
+#lang racket
+
+
+
+#+end_src
+
+** Constructing procedures with Lambda
+
+*** Lambda keyword used to create anonomous functions
+*** Let keyword provides easy way to bind local variables of lambda functions (syntactic sugar for lambda)
+*** Need to be aware if defining a variable with let and global variable share the same name; the value assigned by let only applies to the body of the let "function"
+
+#+begin_src racket :results output
+#lang racket
+
+(define (square x) (* x x))
+
+(define (f x y)
+  (define (f-helper a b)
+    (+ (* x (square a))
+       (* y b)
+       (* a b)))
+  (f-helper (+ 1 (* x y))
+            (- 1 y)))
+
+; no need for intermediate helper function name
+(define (f-lambda x y)
+  ((lambda (a b)
+     (+ (* x (square a))
+        (* y b)
+        (* a b)))
+   (+ 1 (* x y)) ; define x
+   (- 1 y) )) ; define y
+
+; notice locations of definitions of x and y
+(define (f-let x y)
+  (let ((a (+ 1 (* x y))) ; define x
+        (b (- 1 y))) ; define y
+    ; body
+    (+ (* x (square a))
+       (* y b)
+       (* a b))))
+
+(f 2 3)
+(f-lambda 2 3)
+(f-let 2 3)
+#+end_src
+
+#+RESULTS:
+: 78
+: 78
+: 78
+
+*** Exercise 1.34
+
+** Procedures as return values
+
+*** In mathematics we have procedures which transform functions. Eg. The derivative of f(x) = x^3 produces f'(x) = 3x^2
+
+#+begin_src racket :results output
+#lang racket
+
+; Takes function g to produce derivative function
+; g'(x) = [g(x + dx) - g(x)]/dx for a small number of x
+(define (deriv g)
+  (lambda (x)
+    (/ (- (g (+ x dx)) (g x))
+       dx)))
+
+(define dx 0.00001)
+
+; define a function f(x) = x^3
+; and find derivative at x = 5
+(define (cube x) (* x x x))
+((deriv cube) 5)
+#+end_src
+
+#+RESULTS:
+: 75.00014999664018
+
+*** It is useful to apply higher orders of abstraction when applicable
+
+#+begin_src racket :results output
+#lang racket
+
+(define (deriv g)
+  (lambda (x)
+    (/ (- (g (+ x dx)) (g x))
+       dx)))
+
+(define dx 0.00001)
+
+; Define newton's transform which is
+; f(x) = x - g(x)/g'(x)
+(define (newton-transform g)
+  (lambda (x)
+    (- x (/ (g x) ((deriv g) x) ))))
+
+(define (newton-method g guess)
+  (fixed-point (newton-transform g) guess))
+
+(define (sqrt x)
+  (newton-transform (lambda (y) (- (square y) x)) 1.0))
+#+end_src
+
+#+RESULTS:
+
+*** Rights of first class elements are:
+ - Named by variables
+ - Passed as arguments to procedures
+ - return as results by procedures
+ - included in data structures
+
+*** Exercise 1.40
+
+#+begin_src racket :results :output
+#lang racket
+
+; Find roots of x^3 + ax^2 + bx + c
+
+(define (cubic a b c)
+ (lambda (x)  (+ (* x x x) (* x x a) (* x b) c) ))
+#+end_src
+
+*** Exercise 1.41
+
+#+begin_src racket :results output
+#lang racket
+
+(define (double f) ; takes procedure f
+  (lambda (x) (f (f x)) )) ; applies function twice to x
+
+(define (inc a) (+ a 1))
+
+((double inc) 5) ; expected 5 + 2
+(((double (double double)) inc) 5)
+#+end_src
+
+#+RESULTS:
+: 7
+: 21
+
+*** Exercise 1.42
+
+#+begin_src racket :results output
+#lang racket
+
+(define (composition f g)
+  (lambda (x) (f (g x)))) ; first apply g on x then f on the result
+
+(define (square x) (* x x))
+(define (inc x) (+ x 1))
+
+((composition square inc) 6) ; expected (6+1)^2 = 49
+#+end_src
+
+#+RESULTS:
+: 49
+
+*** Exercise 1.43
+
+#+begin_src racket :results output
+#lang racket
+
+(define (composition f g)
+  (lambda (x) (f (g x)))) ; first apply g on x then f on the result
+
+; first attempt but doesn't use procedure as return value
+;; (define (repeated f n)
+;;   (define (iter i result)
+;;     (if (> i n)
+;;         result
+;;         (iter (+ i 1) (f result)) ))
+;;   (lambda (x) (iter 1 x)))
+
+(define (repeated f n)
+  (if (= n 1)
+      (lambda (x) (f x)) ; return procedure
+      (composition f (repeated f (- n 1)) ))) ; compose with recursive next procedure
+
+(define (square x) (* x x))
+
+((repeated square 2) 5); expected (5^2)^2
+#+end_src
+
+#+RESULTS:
+: 625
+
+*** Exercise 1.44
+
+#+begin_src racket :results output
+#lang racket
+
+(define dx 0.001)
+
+(define (smooth f)
+  (lambda (x) ((/ ((+ (f (- x dx)) (f x) (f (+ x dx)) )) 3))))
+
+(define (composition f g)
+  (lambda (x) (f (g x)))) ; first apply g on x then f on the result
+
+(define (repeated f n)
+  (if (= n 1)
+      (lambda (x) (f x)) ; return procedure
+      (composition f (repeated f (- n 1)) )))
+
+(define (test-function x) (+ (* x x) 1))
+
+((repeated (smooth test-function) 2) 3)
+
+#+end_src
+
+#+RESULTS:

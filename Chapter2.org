@@ -1,0 +1,432 @@
+#+title: Chapter2
+
+* Building Abstractions with Data
+
+- Compound data -> Deal with data at a higher conceptual level than that of primitive data objects provided by the language
+- Think of structs in C
+- "Glue" code allows data objects to be combined into more complex structures
+- "Closure" - glue code combines both primitive data and compound data
+- Compound data acts as interface to combine program modules...?
+
+- These principles lead to data-directed programming
+
+* Data abstraction
+- Programs should use data without making any assumptions about the data
+
+- Consider language provided compound structure "pair"
+
+ #+begin_src racket
+#lang racket
+
+(define x (cons 1 2))
+
+(car x)
+(cdr x)
+ #+end_src
+
+ #+RESULTS:
+ : 1
+ : 2
+
+- Objects constructed from pairs are referred to as "list-structured" data
+
+***  Exercise 2.1
+
+#+begin_src racket :results output
+#lang racket
+
+(define (make-rat n d)
+  (if (< d 0)
+      (cons (- n) (- d))
+      (cons n d)))
+
+(make-rat 2 4)
+(make-rat -2 4)
+(make-rat 2 -4)
+(make-rat -2 -4)
+#+end_src
+
+#+RESULTS:
+: '(2 . 4)
+: '(-2 . 4)
+: '(-2 . 4)
+: '(2 . 4)
+
+** Abstraction Barriers
+
+*** Exercise 2.2 and Exercise 2.3
+
+#+begin_src racket
+#lang racket
+
+(define (point x y)
+  (cons x y))
+
+(define (x-point point)
+  (car point))
+
+(define (y-point point)
+  (cdr point))
+
+(define (make-segment p1 p2)
+  (cons p1 p2))
+
+(define (start-segment segment)
+  (car segment))
+
+(define (end-segment segment)
+  (cdr segment))
+
+(define (print-point p)
+  (newline)
+  (display "(")
+  (display (x-point p))
+  (display ",")
+  (display (y-point p))
+  (display ")"))
+
+
+(define p1 (point 0 0))
+(define p2 (point 0 1))
+(define p3 (point 1 1))
+(define p4 (point 1 0))
+
+(print-point p1)
+(print-point p2)
+(print-point p3)
+(print-point p4)
+(newline)
+
+(make-segment p1 p2)
+#+end_src
+
+#+RESULTS:
+:
+: (0,0)
+: (0,1)
+: (1,1)
+: (1,0)
+: '((0 . 0) 0 . 1)
+
+** What is meant by data
+
+- It is not enough to say data is whatever is implemented with constructors and selectors (i.e. procedures)
+  - maybe analogous to objects? however following lectures on lambda calculus it seems data can really be represented as pure functions as opposed to primitive data types in a language
+  - See below
+- Data must also include conditions that must be fulfilled in order to be a valid representation (analogous to business logic?)
+- Any data can be represented by "Procedures + Conditions"
+- Procedural representations of data is referred to "message passing" (central theme of object orientated programming)
+
+- For example with the pair "data" structure z defined as (cons x y); the conditions are:
+  - (car z) returns x
+  - (cdr z) returns y
+- The pair data structure is implemented with procedures
+- We only use procedures to access pairs and therefore do not care about the implementation
+
+- Extremely well made lecture on lambda calculus and how we can represent data as procedures (i.e. functions)
+  - Part 1: https://www.youtube.com/watch?v=3VQ382QG-y4
+  - Part 2: https://www.youtube.com/watch?v=pAnLQ9jwN-E
+
+*** [[org:../SICP/LambdaCalculus.org][Deeper look into lambda calculus]]
+
+*** Exercise 2.5
+
+
+
+
+*** Exercise 2.6 (Church numerals: representing numbers as functions)
+
+#+begin_src racket
+#lang racket
+
+; Seems to take argument f
+(define zero (lambda (f) (lambda (x) x)))
+
+(define (add-1 n)
+  (lambda (f) (lambda (x) (f ((n f) x)))))
+
+(add-1 zero)
+#+end_src
+
+#+RESULTS:
+: #<procedure:...aYz4s/ob-oiJAju.rkt:7:2>
+
+** Extended exercise
+
+Exercise 2.7 and 2.8
+
+#+begin_src racket
+#lang racket
+
+
+(define (add-interval x y)
+  (make-interval (+ (lower-bound x) (lower-bound y))
+                 (+ (upper-bound x) (lower-bound y))))
+
+(define (mul-interval x y)
+  (let ((p1 (* (lower-bound x) (lower-bound y)))
+        (p2 (* (lower-bound x) (upper-bound y)))
+        (p3 (* (upper-bound x) (lower-bound y)))
+        (p4 (* (upper-bound x) (upper-bound y))))
+    (make-interval (min p1 p2 p3 p4)
+                   (max p1 p2 p3 p4))))
+
+(define (div-interval x y)
+  (mul-interval x
+                (if (or (= (upper-bound y) 0) (= (lower-bound y) 0))
+                    (error "Cannot divide by zero")
+                    (make-interval (/ 1.0 (upper-bound y))
+                                   (/ 1.0 (lower-bound y))))))
+
+; exercise 2.7
+(define (make-interval a b)
+  (cons a b))
+
+(define (lower-bound z)
+  (car z))
+
+(define (upper-bound z)
+  (cdr z))
+
+; exercise 2.8
+(define (sub-interval x y)
+  (make-interval (- (lower-bound x) (upper-bound y))
+                 (- (upper-bound x) (lower-bound y))))
+
+; exercise 2.10
+; see modified div-interval
+
+; exercise 2.11
+
+; exercise 2.12
+(define (make-center-width c w)
+  (make-interval (- c w) (+ c w)))
+
+(define (center i)
+  (/ (+ (lower-bound i) (upper-bound i)) 2))
+
+(define (width i)
+  (/ (- (upper-bound i) (lower-bound i)) 2))
+
+(define (make-center-percent c p)
+  (make-center-width c (* c p)))
+
+#+end_src
+
+* Hierarchical Data and closure
+
+- Closure: Result of a function taking parameters from set S results in an element also defined in S
+- In Lisp, creating pairs whose elements are also pairs shows the importance of list structures
+
+** Representing sequences
+
+- Sequence: Ordered collection of data objects
+- We can use pairs to create a sequence. First value in pair is the value at that index; and the second value in the pair is the next element in the sequence
+- car therefore selects the first item (value)
+- cdr therefore selects the rest of the sequence
+- Lisp provides 'list' primitive to make this process easier
+
+ #+begin_src racket
+(cons 1
+      (cons 2
+            (cons 3
+                  (cons 4 nil))))
+
+(list 1 2 3 4)
+
+; append to the beginning of existing list
+(cons 5 (list 1 2 3 4))
+ #+end_src
+
+- Conventional techniques for manipulating lists by "cdr'ing" down the list
+- Because we cdr down a list often we can use null? primitive to know when the list is empty
+- We can also 'cons' up
+- See exercise 2.20 for dotted-tail notation
+
+ #+begin_src racket
+#lang racket
+
+; get the element at index n - 1
+; keep popping until n = 0
+(define (list-ref items n)
+  (if (= n 0)
+      (car items)
+      (list-ref (cdr items) (- n 1))))
+
+(define (length items)
+  (if (null? items)
+      0
+      (+ 1 (length (cdr items)))))
+
+(define (length-2 items)
+  (define (length-iter a result)
+    (if (null? a)
+        result
+        (length-iter (cdr a) (+ 1 result))))
+  (length-iter items 0))
+
+(define (append items1 items2)
+  (if (null? items1)
+      items2
+      (cons (car items1) (append (cdr items1) items2))))
+
+(define squares (list 1 4 9 16 25 36))
+(define other-squares (list 49 64 81 100))
+
+(list-ref squares 3)
+(length squares)
+(length-2 other-squares)
+(append squares other-squares)
+ #+end_src
+
+ #+RESULTS:
+ : 16
+ : 6
+ : 4
+ : '(1 4 9 16 25 36 49 64 81 100)
+
+*** Exercise 2.17
+
+#+begin_src racket
+#lang racket
+
+(define (last-pair items)
+  (if (null? (cdr items))
+      items
+      (last-pair (cdr items))))
+
+(define squares (list 1 4 9 16 25 36))
+(last-pair squares)
+
+#+end_src
+
+#+RESULTS:
+| 36 |
+
+*** Exercise 2.18
+
+#+begin_src racket
+#lang racket
+
+(define (append items1 items2)
+  (if (null? items1)
+      items2
+      (cons (car items1) (append (cdr items1) items2))))
+
+(define (reverse items)
+  (if (null? (cdr items))
+      items
+      (append (reverse (cdr items)) (list (car items)) )))
+
+(define squares (list 1 4 9 16 25 36))
+(reverse squares)
+#+end_src
+
+#+RESULTS:
+| 36 | 25 | 16 | 9 | 4 | 1 |
+
+*** Exercise 2.19
+
+#+begin_src racket
+#lang racket
+
+(define us-coins (list 50 25 10 5 1))
+(define us-coins-reversed (list 1 5 10 25 50))
+(define uk-coins (list 100 50 20 10 5 2 1 0.5))
+
+(define (first-denomination items)
+  (car items))
+
+(define (except-first-denomination items)
+  (cdr items))
+
+(define (no-more? items)
+  (null? items))
+
+(define (cc amount coin-values)
+  (cond ((= amount 0) 1)
+        ((or (< amount 0) (no-more? coin-values)) 0)
+        (else
+         (+ (cc amount
+                (except-first-denomination coin-values))
+            (cc (- amount
+                   (first-denomination coin-values))
+                coin-values)))))
+
+(cc 100 us-coins)
+(cc 100 us-coins-reversed)
+#+end_src
+
+#+RESULTS:
+: 292
+: 292
+
+- Order does not matter
+
+*** Exercise 2.20
+
+- Dotted tail notation
+
+#+begin_src racket
+#lang racket
+
+; Function same-parity takes at least one parameter
+; . w used to represent the list of parameters with as type as x
+(define (same-parity x . w)
+  (cond (= (/ x 2) 0) () ; is even
+        (else () )))
+
+#+end_src
+
+** Mapping over lists
+
+- common pattern. Map takes function and list and pplies function on list
+- map provides useful abstraction as now we don't care how the initial list as created/combined
+
+*** Exercise 2.21
+
+ #+begin_src racket
+#lang racket
+
+(define (square x) (* x x))
+
+(define (square-list items)
+  (if (null? items)
+      null
+      (cons (square (car items)) (square-list (cdr items)))))
+
+(define (square-list-map items)
+  (map square items))
+
+(square-list (list 1 2 3 4))
+(square-list-map (list 2 3 4))
+ #+end_src
+
+ #+RESULTS:
+ | 1 | 4 | 9 | 16 |
+
+*** Exercise 2.22
+
+
+*** Exercise 2.23
+
+#+begin_src racket
+#lang racket
+
+(define (for-each proc items)
+  (if (null? items)
+      null
+      (cons (proc (car items)) (for-each proc (cdr items)))))
+
+(for-each (lambda (x) (newline) (display x))
+          (list 57 321 88))
+#+end_src
+
+#+RESULTS:
+:
+: 57
+: 321
+: 88'(#<void> #<void> #<void>)
+
+
+** Hierarchical structures
