@@ -1,36 +1,23 @@
 #+title: Sicp Notes: Chapter 1
 #+author: Joash Naidoo
-#+header: :session
 
-* Chapter 1.1
+* The Elements of Programming
 
-** Difference between applicative order and normal order evaluation
+- Mechansisms languages use to create complex ideas:
+  - Primitive expressions
+  - Means of Combination
+  - Means of abstraction
 
-Additional Resource: https://sookocheff.com/post/fp/evaluating-lambda-expressions/
+- 2 kinds of elements in programming:
+  - Procedures
+  - Data
+  - Both of these are not so different
 
-Consider:
+** Substitution model for Procedure Application
 
-#+begin_src scheme
-(define (double x) (+ x x)
-(define (average x y) /(+ x y) 2)
-
-(double (average 2 4))
-#+end_src
-
-*** Normal order
-
-Instead it would first substitute operand expressions for parameters
-until it obtained an expression involving only primitive operators, and
-would then perform the evaluation.
-
-Expression is fully expanded then reduced
-#+begin_src scheme
-(double average(2 4))
-(+ (average 2 4) (average 2 4))
-(+ (/ (+ 2 4) 2) (/ (+ 2 4) 2))
-
-; Then start reducing
-#+end_src
+- Will be discussed later how the interpreter substitutes the body of a procedure to an argument
+- Additional Resource: https://sookocheff.com/post/fp/evaluating-lambda-expressions/
+- Lisp interpreter uses Applicative order substitution
 
 *** Applicative order
 
@@ -43,24 +30,37 @@ then applies the resulting procedure to the resulting arguments.
 ; Then start reducing
 #+end_src
 
+*** Normal order
+
+First substitute operand expressions for parameters
+until it obtained an expression involving only primitive operators, and
+would then perform the evaluation.
+
+Expression is fully expanded then reduced
+#+begin_src scheme
+(double average(2 4))
+(+ (average 2 4) (average 2 4))
+(+ (/ (+ 2 4) 2) (/ (+ 2 4) 2))
+
+; Then start reducing
+#+end_src
+
 *** Other notes
 
-**** There are cases when evaluation order does not return the same result
-**** Lisp uses application order as it provides better efficiency
+- There are cases when evaluation order does not return the same result
+- Lisp uses application order as it provides better efficiency
 
 
 ** Conditionals
 
-*** Predicate: name given to procedures which return either true or false
-*** If keyword is a special form in Lisp
-**** A special form is does not follow the normal rules of evaluation
-*** Logic composition operations (and, or and not) construct compound predicates
-**** And and Or are special forms
-**** Not is a procedure
+- Predicate: name given to procedures which return either true or false
+- If keyword is a special form in Lisp
+  - A special form is does not follow the normal rules of evaluation
+- Logic composition operations (and, or and not) construct compound predicates
+  - And and Or are special forms
+  - Not is a procedure
 
-* Exercises
-
-** 1.1
+*** Exercise 1.1
 10
 12
 3
@@ -71,7 +71,7 @@ false
 ...
 
 
-** 1.2
+*** Exercise 1.2
 #+begin_src racket :results output
 #lang racket
 (/ (+ 5 4 (- 2 (- 3 (+ 6 (/ 4 5)))))
@@ -82,7 +82,7 @@ false
 : -37/150
 
 
-** 1.3
+*** Exercise 1.3
 
 #+begin_src racket :tangle yes :noweb yes :results output
 ; Procedure to print the square of the highest two numbers
@@ -110,20 +110,20 @@ false
 : 41
 
 
-** 1.4
+*** Exercise 1.4
 
 
-** 1.5
+*** Exercise 1.5
 
 
-** 1.6 Why does if have to be a special form
+*** Exercise 1.6: Why does if have to be a special form
 
-* Chapter 1.2
+* Procedures and the Processes They Generate
 
-** Recursive Procedure: Specifically a procedure which directly/indirectly refers to itself
-** Recursive process: Specifically how the process evolves. Process builds a chain of deferred operations
-*** Is not the same as a recursive procedure
-** Linear iterative process: Has a complete description of the state of the process at any point (i.e. fixed number of state variables)
+- Recursive Procedure: Specifically a procedure which directly/indirectly refers to itself
+- Recursive process: Specifically how the process evolves. Process builds a chain of deferred operations
+  - Is not the same as a recursive procedure
+- Linear iterative process: Has a complete description of the state of the process at any point (i.e. fixed number of state variables)
 
 Example of a iterative process with recursive procedure:
 
@@ -144,18 +144,107 @@ Example of a iterative process with recursive procedure:
 : 120
 
 ** Tree recursion
-*** Recursion with multiple branches
-*** In general number of steps is proportional to nodes in the tree
-*** Space is proportional to depth of the tree
-*** Counting change example
 
+- Recursion with multiple branches
+- In general number of steps is proportional to nodes in the tree
+- Space is proportional to depth of the tree
+
+- Not really efficient but can be improved with tabulation (i.e. a table of already computed values which the intepreter can fist try look up before computing)
+
+- See Example with Fibonacci series
 #+begin_src racket :results output
 #lang racket
 
-
+(define (fib n)
+  (cond ((= n 0) 0)
+        ((= n 1) 1)
+        (else (+ (fib (- n 1))
+                 (fib (- n 2))))))
 #+end_src
 
+*** Exercise 1.11
+#+begin_src racket
+#lang racket
+
+(require racket/trace)
+(define (f-tree n)
+  (if (< n 3)
+      n
+      (+ (f-tree (- n 1))
+         (* 2 (f-tree (- n 2)))
+         (* 3 (f-tree (- n 3))))))
+(trace f-tree)
+
+;; (define (f-iter n)
+;;   (define (iter i)))
+
+(f-tree 2)
+(f-tree 4)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+>(f-tree 2)
+<2
+2
+>(f-tree 4)
+> (f-tree 3)
+> >(f-tree 2)
+< <2
+> >(f-tree 1)
+< <1
+> >(f-tree 0)
+< <0
+< 4
+> (f-tree 2)
+< 2
+> (f-tree 1)
+< 1
+<11
+11
+#+end_example
+
+*** Exercise 1.12: Pascal's triangle
+#+begin_src racket
+#lang racket
+
+(require racket/trace)
+
+;; (define (pascal-row level)
+;;   (define (pascal-iter i)
+;;     (if (> i level)
+;;         0
+;;         ((display (pascal level i))
+;;          (pascal-iter (+ i 1)))))
+;;   (pascal-iter 1))
+;; ^^^^ need to find a way to execute multiple lines in if statement for this
+
+(define (pascal level coeff)
+  (cond ((= coeff 1) 1)
+        ((= coeff level) 1)
+        (else (+ (pascal (- level 1) (- coeff 1))
+                 (pascal (- level 1) coeff)))))
+; (trace pascal)
+
+(pascal 5 1)
+(pascal 5 2)
+(pascal 5 3)
+(pascal 5 4)
+(pascal 5 5)
+#+end_src
+
+#+RESULTS:
+: 1
+: 4
+: 6
+: 4
+: 1
+
+*** TODO Exercise 1.13
+
 ** Exponentiation
+
+- Interested in algorithm where if the problem size doubles; the resource requirement remains constant
 
 n * n * n * ...
 
@@ -268,6 +357,53 @@ n * n * n * ...
 : #t
 : #f
 
+** Probabilistic Methods
+
+- Dealing with procedures whose answer is only "probably" correct
+- An example is the Fermat test where Carmichael numbers can fool the test
+
+*** Exercise 1.21
+#+begin_src racket
+#lang racket
+
+(define (square x) (* x x))
+(define (smallest-divisor n) (find-divisor n 2))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divides? test-divisor n) test-divisor)
+        (else (find-divisor n (+ test-divisor 1)))))
+(define (divides? a b) (= (remainder b a) 0))
+
+(smallest-divisor 199)
+(smallest-divisor 1999)
+(smallest-divisor 19999)
+#+end_src
+
+#+RESULTS:
+: 199
+: 1999
+: 7
+
+*** TODO Exercise 1.22
+#+begin_src racket
+#lang racket
+(define (timed-prime-test n)
+  (newline)
+  (display n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime (- (runtime) start-time))))
+(define (report-prime elapsed-time)
+  (display " *** ")
+  (display elapsed-time))
+
+(define (search-for-primes lbound hbound)
+  ())
+#+end_src
+
+* Formulating Abstractions with higher order procedures
+
 ** Procedures as Arguments
 
 *** Exercise 1.30
@@ -353,9 +489,9 @@ n * n * n * ...
 
 ** Constructing procedures with Lambda
 
-*** Lambda keyword used to create anonomous functions
-*** Let keyword provides easy way to bind local variables of lambda functions (syntactic sugar for lambda)
-*** Need to be aware if defining a variable with let and global variable share the same name; the value assigned by let only applies to the body of the let "function"
+- Lambda keyword used to create anonomous functions
+- Let keyword provides easy way to bind local variables of lambda functions (syntactic sugar for lambda)
+- Need to be aware if defining a variable with let and global variable share the same name; the value assigned by let only applies to the body of the let "function"
 
 #+begin_src racket :results output
 #lang racket
@@ -402,7 +538,7 @@ n * n * n * ...
 
 ** Procedures as return values
 
-*** In mathematics we have procedures which transform functions. Eg. The derivative of f(x) = x^3 produces f'(x) = 3x^2
+- In mathematics we have procedures which transform functions. Eg. The derivative of f(x) = x^3 produces f'(x) = 3x^2
 
 #+begin_src racket :results output
 #lang racket
@@ -425,7 +561,7 @@ n * n * n * ...
 #+RESULTS:
 : 75.00014999664018
 
-*** It is useful to apply higher orders of abstraction when applicable
+- It is useful to apply higher orders of abstraction when applicable
 
 #+begin_src racket :results output
 #lang racket
@@ -452,7 +588,7 @@ n * n * n * ...
 
 #+RESULTS:
 
-*** Rights of first class elements are:
+- Rights of first class elements are:
  - Named by variables
  - Passed as arguments to procedures
  - return as results by procedures
