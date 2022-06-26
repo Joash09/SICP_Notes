@@ -49,6 +49,7 @@ Expression is fully expanded then reduced
 
 - There are cases when evaluation order does not return the same result
 - Lisp uses application order as it provides better efficiency
+- See Exercise 1.26
 
 
 ** Conditionals
@@ -334,6 +335,9 @@ n * n * n * ...
 
 ** Testing for primality
 
+*** Searching for divisors
+- Iteratively increase a test-divisor starting at two (ignoring 1 as a factor)
+- If test-divisor^2 is greater than n and no divisor is found; number is prime
 #+begin_src racket :results output
 #lang racket
 
@@ -356,6 +360,50 @@ n * n * n * ...
 #+RESULTS:
 : #t
 : #f
+
+*** Fermat's theorem
+- $\theta(log n)$
+
+- Congruences: Arithmetic of remainders
+- Consider 40 % 3 and 16 % 3 both produce 1
+- Therefore 40 and 16 with respect to 3 are congurent
+
+- Properties of congruence worth noting:
+  - Remainder of sum is equal to sum of the remainders
+  - Remainder of the product is equal to product of the remainder
+    - Useful when dealing with powers
+  - a^n congurent b^n (mod m)
+  - Fermat's theorem: if p is prime; a^p congruent a (mod p)
+  - Fermat's Little Theorem: a^(p-1) congurent 1 (mod p)
+
+#+begin_src racket
+#lang sicp
+
+(define (square x) (* x x))
+
+; define a modulo procedure
+; returns base^exp mod m
+(define (expmod base exp m)
+  (cond ((= exp 0) 1) ; n^0 = 1
+
+        ; [(base^(n/2) mod m)^2] mod m
+        ((even? exp) (remainder (square (expmod base (/ exp 2)) m) m))
+
+        ; product of the remainder
+        (else (remainder (* base (expmod base (- exp 1) m)) m))))
+
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+
+(define (fast-prime? n times)
+  (cond ((= times 0) true)
+        ((fermat-test n) (fast-prime? n (- times 1)))
+        (else false)))
+#+end_src
+
+#+RESULTS:
 
 ** Probabilistic Methods
 
@@ -384,25 +432,307 @@ n * n * n * ...
 : 1999
 : 7
 
-*** TODO Exercise 1.22
+*** Exercise 1.22
 #+begin_src racket
-#lang racket
+#lang sicp
+
+; see testing for primality
+(define (square x) (* x x))
+(define (divides? a b) (= (remainder b a) 0))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divides? test-divisor n) test-divisor)
+        (else (find-divisor n (+ test-divisor 1)))))
+(define (smallest-divisor n) (find-divisor n 2))
+(define (prime? n) (= n (smallest-divisor n)))
+
+; modified to not print every number
 (define (timed-prime-test n)
-  (newline)
-  (display n)
+  ; (newline)
+  ; (display n)
   (start-prime-test n (runtime)))
 (define (start-prime-test n start-time)
   (if (prime? n)
-      (report-prime (- (runtime) start-time))))
-(define (report-prime elapsed-time)
+      (report-prime n (- (runtime) start-time))))
+(define (report-prime prime elapsed-time)
+  (newline)
+  (display prime)
   (display " *** ")
   (display elapsed-time))
 
 (define (search-for-primes lbound hbound)
-  ())
+  (cond ((even? lbound) (search-for-primes (+ lbound 1) hbound))
+        ((> lbound hbound) nil)
+        (else (search-for-primes (+ lbound 2) hbound)))
+  (timed-prime-test lbound))
+
+(search-for-primes 1000 1100)
+(newline)
+(search-for-primes 10000 10100)
+(newline)
+(search-for-primes 100000 100100)
+(newline)
+(search-for-primes 1000000 1000100)
 #+end_src
 
+#+RESULTS:
+#+begin_example
+
+1097 *** 1
+1093 *** 0
+1091 *** 0
+1087 *** 1
+1069 *** 0
+1063 *** 0
+1061 *** 1
+1051 *** 0
+1049 *** 1
+1039 *** 0
+1033 *** 0
+1031 *** 1
+1021 *** 0
+1019 *** 1
+1013 *** 1
+1009 *** 0
+
+10099 *** 1
+10093 *** 1
+10091 *** 1
+10079 *** 1
+10069 *** 1
+10067 *** 1
+10061 *** 1
+10039 *** 1
+10037 *** 2
+10009 *** 2
+10007 *** 1
+
+100069 *** 3
+100057 *** 4
+100049 *** 4
+100043 *** 4
+100019 *** 4
+100003 *** 4
+
+1000099 *** 12
+1000081 *** 12
+1000039 *** 12
+1000037 *** 12
+1000033 *** 13
+1000003 *** 12
+#+end_example
+
+*** Exercise 1.23
+#+begin_src racket
+#lang sicp
+
+(define (next n)
+  (if (= n 2)
+      3
+      (+ n 2)))
+
+(define (square x) (* x x))
+(define (divides? a b) (= (remainder b a) 0))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divides? test-divisor n) test-divisor)
+        (else (find-divisor n (next test-divisor))))) ; modified
+(define (smallest-divisor n) (find-divisor n 2))
+(define (prime? n) (= n (smallest-divisor n)))
+
+(define (timed-prime-test n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (prime? n)
+      (report-prime n (- (runtime) start-time))))
+(define (report-prime prime elapsed-time)
+  (newline)
+  (display prime)
+  (display " *** ")
+  (display elapsed-time))
+
+(define (search-for-primes lbound hbound)
+  (cond ((even? lbound) (search-for-primes (+ lbound 1) hbound))
+        ((> lbound hbound) nil)
+        (else (search-for-primes (+ lbound 2) hbound)))
+  (timed-prime-test lbound))
+
+(search-for-primes 1000 1100)
+(newline)
+(search-for-primes 10000 10100)
+(newline)
+(search-for-primes 100000 100100)
+(newline)
+(search-for-primes 1000000 1000100)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+
+1097 *** 0
+1093 *** 0
+1091 *** 1
+1087 *** 0
+1069 *** 0
+1063 *** 1
+1061 *** 0
+1051 *** 0
+1049 *** 0
+1039 *** 0
+1033 *** 0
+1031 *** 0
+1021 *** 0
+1019 *** 1
+1013 *** 1
+1009 *** 0
+
+10099 *** 1
+10093 *** 0
+10091 *** 1
+10079 *** 1
+10069 *** 0
+10067 *** 1
+10061 *** 0
+10039 *** 1
+10037 *** 1
+10009 *** 1
+10007 *** 0
+
+100069 *** 2
+100057 *** 2
+100049 *** 2
+100043 *** 2
+100019 *** 2
+100003 *** 2
+
+1000099 *** 7
+1000081 *** 6
+1000039 *** 6
+1000037 *** 7
+1000033 *** 6
+1000003 *** 6
+#+end_example
+
+Yes. The compute time has been halved
+
+*** Exercise 1.24
+
+#+begin_src racket
+#lang sicp
+
+(define (square x) (* x x))
+(define (expmod base exp m)
+  (cond ((= exp 0) 1) ; n^0 = 1
+        ((even? exp) (remainder (square (expmod base (/ exp 2) m)) m))
+        (else (remainder (* base (expmod base (- exp 1) m)) m))))
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+(define (fast-prime? n times)
+  (cond ((= times 0) true)
+        ((fermat-test n) (fast-prime? n (- times 1)))
+        (else false)))
+
+(define (timed-prime-test n)
+  (start-prime-test n (runtime)))
+(define (start-prime-test n start-time)
+  (if (fast-prime? n 100) ; choosing 100
+      (report-prime n (- (runtime) start-time))))
+(define (report-prime prime elapsed-time)
+  (newline)
+  (display prime)
+  (display " *** ")
+  (display elapsed-time))
+
+(timed-prime-test 1009)
+(timed-prime-test 1013)
+(timed-prime-test 1019)
+
+(timed-prime-test 10007)
+(timed-prime-test 10009)
+(timed-prime-test 10037)
+
+(timed-prime-test 100003)
+(timed-prime-test 100019)
+(timed-prime-test 100043)
+
+(timed-prime-test 1000003)
+(timed-prime-test 1000033)
+(timed-prime-test 1000037)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+
+1009 *** 45
+1013 *** 42
+1019 *** 44
+10007 *** 53
+10009 *** 52
+10037 *** 56
+100003 *** 61
+100019 *** 61
+100043 *** 62
+1000003 *** 71
+1000033 *** 70
+1000037 *** 71
+#+end_example
+
+- Although computation is growing by an order of magnitude; the time is increasing by a factor of 10 (i.e. follows logarithmic growth)
+
+*** Exercise 1.25
+
+- No.
+
+*** Exercise 1.26
+
+- The Lisp interpreter by explicitly defining the multiplication the arguements separately and then multiplied together. Instead the the argument should be evaluated once and then using that result, squared.
+
+- Explicitly calling the multiplication causes normal order evaluation versus applicative evaluation.
+
+*** TODO Exercise 1.27
+ - Carmichael numbers are numbers which pass the Fermat test however not prime numbers
+ - Very few
+ - 561, 1105, 1729, 2465, 2821, 6601 are examples
+
+#+begin_src racket
+#lang sicp
+
+(define (square x) (* x x))
+(define (expmod base exp m)
+  (cond ((= exp 0) 1) ; n^0 = 1
+        ((even? exp) (remainder (square (expmod base (/ exp 2) m)) m))
+        (else (remainder (* base (expmod base (- exp 1) m)) m))))
+(define (fermat-test n)
+  (define (try-it a)
+    (= (expmod a n n) a))
+  (try-it (+ 1 (random (- n 1)))))
+
+(fermat-test 561)
+(fermat-test 1105)
+(fermat-test 1729)
+(fermat-test 2465)
+(fermat-test 2821)
+(fermat-test 6601)
+#+end_src
+
+#+RESULTS:
+: #t
+: #t
+: #t
+: #t
+: #t
+: #t
+
+*** TODO Exercise 1.28
+
 * Formulating Abstractions with higher order procedures
+
+- First abstraction is to name procedures, and work in terms of the abstraction
+- Useful abstraction to pass procedures as arguments
+- Conversely procedures can return other procedures
+- Examples and exercises using this abstraction is shown below
 
 ** Procedures as Arguments
 
@@ -427,11 +757,12 @@ n * n * n * ...
 #+RESULTS:
 : 20
 
-*** Exercise 1.31 a)
+*** Exercise 1.31 a) and b)
 
 #+begin_src racket :results output
 #lang racket
 
+(require racket/trace)
 (define (product term a next b)
   (define (iter a result)
     (if (> a b)
@@ -439,20 +770,35 @@ n * n * n * ...
     (iter (next a) (* (term a) result)) ))
   (iter a 1))
 
+; factorial
 (define (inc a) (+ a 1))
 (define (product-basic a) a)
-
 (product product-basic 1 inc 5)
+
+; pi approximation
+(define (pi-approx-inc a)
+  (+ a 2))
+(define (pi-approx-product a)
+  (if (= a 2)
+      2
+      (* a a)))
+; (trace pi-approx-product)
+(define pi-approx-num
+  (product pi-approx-product 2 pi-approx-inc 10))
+(define pi-approx-den
+  (product pi-approx-product 3 pi-approx-inc 9))
+
+(/ pi-approx-num pi-approx-den)
+
+; product rewritten as recursive
+;; (define (product-recur term a next b)
+;;   (if (> a b)
+;;       1
+;;       (product-recur )))
 #+end_src
 
 #+RESULTS:
-: 120
-
-*** Exercise 1.31 b)
-
-#+begin_src racket :results output
-
-#+end_src
+: 32768/3969
 
 *** Exercise 1.32 a)
 
@@ -481,11 +827,41 @@ n * n * n * ...
 *** Exercise 1.33
 
 #+begin_src racket :results output
-#lang racket
+#lang sicp
+
+(define (filter-accumulate combinator null-value term a next b filtr)
+  (define (iter a result)
+    (cond ((> a b) result)
+          ((not (filtr a)) result)
+          (else (iter (next a) (combinator (term a) result)))))
+  (iter a null-value))
+
+; get prime test
+(define (square x) (* x x))
+(define (divides? a b) (= (remainder b a) 0))
+(define (find-divisor n test-divisor)
+  (cond ((> (square test-divisor) n) n)
+        ((divides? test-divisor n) test-divisor)
+        (else (find-divisor n (prime-next test-divisor))))) ; modified
+(define (smallest-divisor n) (find-divisor n 2))
+(define (prime? n) (= n (smallest-divisor n)))
 
 
+(define (prime-next n)
+  (cond ((= n 1) 2)
+        ((= n 2) 3)
+        (else (+ n 2))))
+(define (basic-term a) a)
+(define (relatively-prime? n)
+  (define (iter a)
+    (cond ((= a n) true)
+          )))
 
+(filter-accumulate * 1 basic-term 1 prime-next 10 prime?) ; expecting 210
 #+end_src
+
+#+RESULTS:
+: 210
 
 ** Constructing procedures with Lambda
 
@@ -536,7 +912,47 @@ n * n * n * ...
 
 *** Exercise 1.34
 
-** Procedures as return values
+** Procedures as General Methods
+
+- Section builds on Procedures as Arguments section (how to use abstraction to build more general procedures)
+- Sections gives two more examples; finding zeros and finding fixed points of functions
+
+ #+begin_src racket
+#lang sicp
+
+; half-interval theorem (Reminds me of squeeze theorem)
+; f(a) [negative] < 0 < f(b) [postive]
+; as long as ^this is true we can keep halving the distance between a and b to approximate a zero
+(define (search f neg-point pos-point)
+  (let ((midpoint (average neg-point pos-point)))
+    (if (close-enough? neg-point pos-point)
+        midpoint
+        (let ((test-value (f midpoint)))
+          (cond ((positive? test-value) (search f neg-point midpoint))
+                ((negative? test-value) (search f midpoint pos-point))
+                (else midpoint)
+                )))))
+
+(define (close-enough? x y) (< (abs (- x y)) 0.0001))
+(define (average a b) (/ (+ a b) 2))
+
+; consider the case we don't provide negative and positive numbers
+(define (half-interval-method f a b)
+  (let ((a-value (f a))
+        (b-value (f b)))
+    (cond ((and (negative? a-value) (positive? b-value)) (search f a b))
+          ((and (negative? b-value) (positive? a-value)) (search f b a))
+          (else (error "Try different values which produce opposite sign" a b))
+          )))
+
+(half-interval-method sin 2.0 4.0) ; approx pi
+#+end_src
+
+#+RESULTS:
+: 3.141571044921875
+
+
+** Procedures as Return values
 
 - In mathematics we have procedures which transform functions. Eg. The derivative of f(x) = x^3 produces f'(x) = 3x^2
 
