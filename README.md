@@ -2,11 +2,11 @@
 
 Collection of notes and exercise attempts from working through Structure and Interpretation of Computer Programs (SICP), a textbook by professors Harold Abelson and Gerald Jay Sussman with Julie Sussman. As the title suggests, I am going through the book to get another take on how to build programs in the future.
 
-📓 You can find a copy of SICP provided by MIT [here](https://web.mit.edu/6.001/6.037/sicp.pdf)
-✏ The notes and attempts are done in with Org mode in [Doom Emacs](https://github.com/doomemacs/doomemacs).
-🎾 Code snippets are written in [Racket](https://racket-lang.org/), a dialect of Lisp
-📦 Using SICP package to run primitives expected by MIT scheme not found in Racket
-📦 In the exercises which involved recursion I often used the "trace" package which printed out the function calls and its arguments
+- 📓 You can find a copy of SICP provided by MIT [here](https://web.mit.edu/6.001/6.037/sicp.pdf)
+- ✏ The notes and attempts are done in with Org mode in [Doom Emacs](https://github.com/doomemacs/doomemacs).
+- 🎾 Code snippets are written in [Racket](https://racket-lang.org/), a dialect of Lisp
+- 📦 Using SICP package to run primitives expected by MIT scheme not found in Racket
+- 📦 In the exercises which involved recursion I often used the "trace" package which printed out the function calls and its arguments
 
 # 🌟 Highlights
 
