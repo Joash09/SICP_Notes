@@ -1,0 +1,57 @@
+#+title: Chapter 3: Modularity, Objects and State
+#+author: Joash Naidoo
+
+- Really 2 prominent organizational strategies for programs:
+  - Concentrating on objects and how their behaviours change over time
+    - Substitution model is not appropriate and will be replaced with *environment model* of computation
+  - Concentrating on streams like in signal processing systems
+    - Will be discussing *delayed evaluation* model of computation
+
+* Assignment and Local State
+
+- Objects have a state if it changes over time
+- Can alter the vale of the defined variable with *set!* (implementation dependant)
+  - procedures which end with ! by convention change value of variable
+- With *begin* keyword we can evaluate expressions in a sequence
+
+- Following code procedure shows how to create an "environment" for which only that procedure can modify the value of balance
+- Substitution model of evaluation doesn't work here; i.e. can't substitute 100 for balance everytime as the code suggests
+- Each call to make-withdraw defines procedures associated with balance. Dispatch takes a tag and returns corresponding method: *message-passing* programming
+
+ #+begin_src racket
+#lang sicp
+
+; same as new-withdraw but now we set balance before-hand
+(define (make-account balance)
+  (define (widthdraw amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount)) balance)
+        "Insuffient funds"))
+
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    balance)
+
+  (define (dispatch m)
+    (cond ((eq? m 'widthdraw) widthdraw)
+          ((eq? m 'deposit) deposit)
+          (else (error "Unknown tag:" m))))
+
+  dispatch) ; everytime make-account is called; call dispatch
+
+(define W1 (make-account 100)) ; associating make-account procedure with variable W1
+(define W2 (make-account 100))
+((W1 'widthdraw) 3) ; calling make-account which in turn calls dispatch
+((W2 'deposit) 50) ; calling make-account which in turn calls dispatch
+ #+end_src
+
+ #+RESULTS:
+ : 97
+ : 150
+
+** Exercise 3.1
+** Exercise 3.2
+** Exercise 3.3
+** Exercise 3.4
+
+* Benefits of local assignment
