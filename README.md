@@ -49,4 +49,20 @@ Collection of notes and exercise attempts from working through Structure and Int
         - needing unique procedure names for every type (despite being similar functionality in real world)
       - creating a table of procedure to be called vs type
       - implement this table through generic procedures and packages 
+      
+- Chapter 3
+  * Assignment: 
+    - can introduce state with the let keyword
+    - set! keyword is for modifying a variable
+    - procedures which act on the variable (with set!) are also defined in let environment
+    - then with messaging-passing; we can modify state of variable accordingly
+    
+    - begin procudere is useful for grouping sequences of procedures
+    
+  * Benefits of assignment:
+    - Great for modelling computational objects whose state changes over time
+  * Costs of assignment:
+    - With assignments we cannot be sure a procedure with the same arguments to the same function will produce the same result
+    - Programming with no assignments is referred to as *functional* programming
+    - order of evaluation of subexpressions matter with assigments (i.e. right to left or left to right)
 

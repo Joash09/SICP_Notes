@@ -12,7 +12,7 @@
 - Objects have a state if it changes over time
 - Can alter the vale of the defined variable with *set!* (implementation dependant)
   - procedures which end with ! by convention change value of variable
-- With *begin* keyword we can evaluate expressions in a sequence
+- With *begin* keyword we can group and evaluate expressions part of a sequence
 
 - Following code procedure shows how to create an "environment" for which only that procedure can modify the value of balance
 - Substitution model of evaluation doesn't work here; i.e. can't substitute 100 for balance everytime as the code suggests
@@ -49,9 +49,142 @@
  : 97
  : 150
 
-** Exercise 3.1
-** Exercise 3.2
-** Exercise 3.3
-** Exercise 3.4
+*** Exercise 3.1
+#+begin_src racket
+#lang sicp
 
-* Benefits of local assignment
+(define (make-accumulator sum)
+  (lambda (inc)
+    (set! sum (+ sum inc))
+    sum))
+
+(define S1 (make-accumulator 10))
+(define S2 (make-accumulator 10))
+(S1 10)
+(S1 10)
+(S2 5)
+#+end_src
+
+#+RESULTS:
+: 20
+: 30
+: 15
+
+*** Exercise 3.2
+#+begin_src racket
+#lang sicp
+
+(define (make-monitored func) ; procedure which takes function
+
+  (let ((count 0)) ; set internal count variable
+
+    (define (apply-procedure amount)
+      (set! count (+ count 1)) ; inc everytime make-monitored called
+      (func amount))
+
+    (define (dispatch m)
+      (cond ((eq? m 'how-many-calls?) count)
+            ((eq? m 'reset) (begin (set! count 0) count))
+            (else (apply-procedure m))))
+
+    dispatch))
+
+(define s (make-monitored sqrt))
+(s 100)
+(s 'how-many-calls?)
+(s 100)
+(s 'how-many-calls?)
+(s 'reset)
+#+end_src
+
+#+RESULTS:
+: 10
+: 1
+: 10
+: 2
+: 0
+
+*** Exercise 3.3 and 3.4
+#+begin_src racket
+#lang sicp
+
+(define (make-account balance password)
+
+  (let ((incorrect-count 0))
+
+    (define (widthdraw amount)
+      (if (>= balance amount)
+          (begin (set! balance (- balance amount))
+                 balance)
+          "Insuffient funds"))
+
+    (define (deposit amount)
+      (set! balance (+ balance amount))
+      balance)
+
+    (define (dispatch p m)
+      (cond ((> incorrect-count 7) (error "Calling the cops"))
+            ((not (eq? p password))
+             (begin (set! incorrect-count (+ incorrect-count 1))
+                    (error "Incorrect password")))
+            ((eq? m 'widthdraw) widthdraw)
+            ((eq? m 'deposit) deposit)
+            (else (error "Unknown tag:" m))))
+
+    dispatch))
+
+(define acc (make-account 100 'secret-password))
+
+((acc 'secret-password 'widthdraw) 40)
+((acc 'secret-password 'deposit) 40)
+((acc 'another-password 'deposit) 40)
+#+end_src
+
+** Benefits of assignment
+
+- Viewing systems as objects with states can lead to modular design
+- Great for modelling computational objects whose state changes over time
+
+** Cost of Introducing assignment
+
+- No longer use substitution model of evaluation
+- No evaluation model with "nice" mathematical properties
+- With assignments we cannot be sure a procedure with the same arguments to the same function will produce the same result
+- Programming with no assignments is referred to as *functional* programming
+- With state, variables are no longer just names for value
+
+- Cannot determine "change" without some a priori notion of "sameness"
+
+- Imperative programming: making extensive use of assignments
+- Bugs susceptible to imperative programs and not functional ones:
+  - Order of assignments becomes very important
+  - This is worse when executing concurrent programs
+- Imperative programs not more performant than calling procedures
+- May be easier to start with functional programming over imperative; as being concerned with the order of assignments detract from important concepts
+
+*** Exercise 3.7
+#+begin_src racket
+#lang sicp
+
+#+end_src
+
+*** Exercise 3.8
+#+begin_src racket
+#lang sicp
+
+(define (make-function x)
+        (lambda (y) (begin (set! x (* x y))
+                           x)))
+
+; order of evaluation of subexpressions matter with assigment
+(define f (make-function -1))
+(+ (f 0) (f 1))
+(define s (make-function -1))
+(+ (s 1) (s 0))
+#+end_src
+
+#+RESULTS:
+: 0
+: -1
+
+* The Environment Model of Evaluation
