@@ -1390,9 +1390,15 @@ First quote creates list with second <quote> and abracadabra; hence car of the l
 (define (div-complex z1 z2)
   (make-from-mag-ang (/ (magnitude z1) (magnitude z2))
                      (- (angle z1) (angle z2))))
+
 #+end_src
 
+- Mechanism for tagging data
+- Will need differentiate between the procedures of the 2 implementations
+- Then define general procedures which call the corresponding implementation based off tag
+
 #+begin_src racket
+#lang sicp
 
 ; define tag datum with ordinary list structure with helper methods
 (define (attach-tag type-tag contents)
@@ -1408,6 +1414,25 @@ First quote creates list with second <quote> and abracadabra; hence car of the l
 
 (define (rectangular? z) (eq? (type-tag z) 'rectangular))
 (define (polar? z) (eq? (type-tag z) 'polar))
+
+; rewrite implementation procedures
+; rectangular
+(define (real-part-rectangular z) (car z))
+(define (img-part-rectangular z) (cdr z))
+
+; polar
+(define (real-part-polar z) (* (magnitude z) (cos (angle z))))
+(define (img-part-polar z) (* (magnitude z) (sin (angle z))))
+(define (magnitude z) (car z))
+(define (angle z) (cdr z))
+
+; general methods
+(define (real-part x)
+  (cond ((rectangular? x) (real-part-rectangular x))
+        ((polar? x) (real-part-polar x))
+        (else (error "Unknown type"))))
+
+; (define (img-part x) ...
 #+end_src
 
 *** Data-directed programming and Additivity
@@ -1483,9 +1508,6 @@ First quote creates list with second <quote> and abracadabra; hence car of the l
 (define (make-from-real-imag x y)
   ((get 'make-from-real-imag 'rectangular) x y))
 #+end_src
-
-
-
 
 
 * Systems with Generic Operations
