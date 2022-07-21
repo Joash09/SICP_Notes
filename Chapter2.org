@@ -619,45 +619,47 @@ Exercise 2.7 and 2.8
 - Modular design allows us to mix and match and change the order of operations applied to the "signal" within the system
 
  #+begin_src racket
-#lang racket
+#lang sicp
 
+; if predicate is true return element with rest of filtered
+; else return rest of the filtered items
 (define (filter predicate sequence)
-  (cond ((null? sequence) null)
-        ((predicate (car sequence))
-         (cons (car sequence) (filter predicate (cdr sequence))))
+  (cond ((null? sequence) nil)
+        ((predicate (car sequence)) (cons (car sequence)
+                                          (filter predicate (cdr sequence))))
         (else (filter predicate (cdr sequence)))))
 
+; apply operation on the first element with the rest of the list
 (define (accumulate op initial sequence)
   (if (null? sequence)
       initial
       (op (car sequence) (accumulate op initial (cdr sequence)))))
 
+(accumulate + 0 (list 1 2 3 4 5))
+
+; add low to current list and rest of the elements to be added in interval
 (define (enumerate-interval low high)
   (if (> low high)
-      null
+      nil
       (cons low (enumerate-interval (+ low 1) high))))
 
-(define (sum-odd-squares tree)
-  (accumulate +
-              0
-              (map square
-                   (filter odd?
-                           (enumerate-tree tree)))))
-(define (even-fibs n)
-  (accumulate cons
-              null
-              (filter even?
-                      (map fib
-                           (enumerate-interval 0 n)))))
+(enumerate-interval 2 7)
 
+; return a list of elements part of a tree
+; append the enumerated this part of the tree with the enumerated other part of the tree
+(define (enumerate-tree tree)
+  (cond ((null? tree) nil)
+        ((not (pair? tree)) (list tree)) ; return last element as a list
+        (else (append (enumerate-tree (car tree)) (enumerate-tree (cdr tree))))))
 
-(display (filter odd? (list 1 2 3 4 5)))
-(newline)
-(display (accumulate + 0 (list 1 2 3 4 5)))
-(newline)
-(display (list (enumerate-interval 2 7)))
+(enumerate-tree (list 1 (list 2 (list 3 4)) 5))
 
-()
+;; signal flow diagrams
+;; orignates from enumerate-tree passes to filter odd? then map to squares then accumulate
+(define (sum-odd-square tree)
+  (accumulate + 0 (map (lambda (x) (* x x)) (filter odd? (enumerate-tree tree)))))
+
+(sum-odd-square (list 1 (list 2 (list 3 4)) 5))
 
  #+end_src
 
@@ -947,33 +949,119 @@ Exercise 2.7 and 2.8
 #+RESULTS:
 | 4 | 3 | 2 | 1 |
 
-** Nested Mappings
+** Sequence Operations and Mappings
 
 - Express sequence paradigm for computations that are commonly use nested loops
+- map + accumulate function is popular enough to define flatmap
 
  #+begin_src racket
-#lang racket
+#lang sicp
 
-;; Given a positive integer n, find all ordered pairs of distinct positive integers i and j, where 1 <= j< i<= n, such that i + j is prime.
+; taken from above
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence) (accumulate op initial (cdr sequence)))))
+(define (enumerate-interval low high)
+  (if (> low high)
+      nil
+      (cons low (enumerate-interval (+ low 1) high))))
+
+(define (filter predicate sequence)
+  (cond ((null? sequence) nil)
+        ((predicate (car sequence)) (cons (car sequence)
+                                          (filter predicate (cdr sequence))))
+        (else (filter predicate (cdr sequence)))))
 
 ;; Generate sequence of pairs <= n
+(define n 5)
 (accumulate append
-            null
+            nil
             (map (lambda (i)
                    (map (lambda (j) (list i j)
                         (enumerate-interval 1 (- i 1)))))
                  (enumerate-interval 1 n)))
 
+; map + accumulate function is popular enough to define flatmap
+;; (define (flatmap proc seq)
+;;   (accumulate append nil (map proc seq)))
+
+; recursively generate permutations of S - x
+;; (define (permutations s)
+;;   (if (null? s)
+;;       (list nil)
+;;       (flatmap (lambda (x)
+;;                  (map (lambda (p) (cons x p))
+;;                       (permutations (remove x s))))
+;;                s)))
+
+; filter all items aren't equal to x
+(define (remove item sequence)
+  (filter (lambda (x) (not (= x item))) sequence))
  #+end_src
+
+ #+RESULTS:
+ : 15
+ : (2 3 4 5 6 7)
+ : (1 2 3 4 5)
+ : 35
+
 
 *** Exercise 2.40: Unique pairs
 #+begin_src racket
-#lang racket
+#lang sicp
 
-(define (unique-pairs n))
+(define (enumerate low high)
+  (if (> low high)
+      nil
+      (cons low (enumerate (+ low 1) high))))
+(define (filter predicate sequence)
+  (cond ((null? sequence) nil)
+        ((predicate (car sequence)) (cons (car sequence)
+                                          (filter predicate (cdr sequence))))
+        (else (filter predicate (cdr sequence)))))
 
+; succesive pairs up to and incl. n
+(define (unique-pairs n)
+  (map (lambda (i) (list (- i 1) i))
+       (filter even? (enumerate 1 n))))
+
+(unique-pairs 5)
+(unique-pairs 10)
 #+end_src
 
+#+RESULTS:
+: ((1 2) (3 4))
+: ((1 2) (3 4) (5 6) (7 8) (9 10))
+
+*** Exercise 2.41: ordered triplets
+#+begin_src racket
+#lang sicp
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence) (accumulate + 0 (cdr sequence)))))
+(define (filter predicate sequence)
+  (cond ((null? sequence) nil)
+        ((predicate (car sequence)) (cons (car sequence)
+                                          (filter predicate (cdr sequence))))
+        (else (filter predicate (cdr sequence)))))
+(define (enumerate low high)
+  (if (> low high)
+      nil
+      (cons low (enumerate (+ low 1) high))))
+
+; enumerate from 0 to (n-2) -> map element + next 2 (inner loop from current index to index + 2) -> sum -> filter where sum >= s -> accumulate
+(define (ordered-triplets n s)
+              (filter (lambda (i) (<= i s))
+                      (map (lambda (j) (accumulate + 0 (enumerate j (+ j 2))))
+                           (enumerate 0 (- n 2)))))
+
+(ordered-triplets 8 15)
+#+end_src
+
+#+RESULTS:
+: (3 6 9 12 15)
 
 * Symbolic Data
 

@@ -33,6 +33,7 @@ Collection of notes and exercise attempts from working through Structure and Int
       - introduction to lambda calculus 
     * key to organizing programs is to clearly represent the signal flow structure
     * higher order functions: reduce, accumulate, fold
+    * can achieve modularity by treating data as a signal flow structure (e.g. elements from enumerate function can be mapped to a function, the results of which is filtered, and the filtered results get accumulated)
     
     * performance benefits when choosing structure to represent data:
       - unordered lists vs ordered lists vs trees 
