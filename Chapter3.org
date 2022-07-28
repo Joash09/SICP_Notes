@@ -2,9 +2,9 @@
 #+author: Joash Naidoo
 
 - Really 2 prominent organizational strategies for programs:
-  - Concentrating on objects and how their behaviours change over time
+  1. Concentrating on objects and how their behaviours change over time
     - Substitution model is not appropriate and will be replaced with *environment model* of computation
-  - Concentrating on streams like in signal processing systems
+  2. Concentrating on streams like in signal processing systems
     - Will be discussing *delayed evaluation* model of computation
 
 * Assignment and Local State
@@ -188,3 +188,80 @@
 : -1
 
 * The Environment Model of Evaluation
+
+- Environments are made up of a sequence of frames
+- Frame: a table of *bindings* which associate variable names with values
+  - each frame (except the global environment) has a pointer to enclosing environment. We can think of this as a stack of frames. If a variable name is not found in the current frame, move up frames until it is found
+  - value of variable w.r.t environment is given by first frame in environment with a binding to that variable
+  - if no frame has a binding to that variable; the variable is unbound
+  - Top level frame is our *global environment*. It has no enclosing environments
+  - frame may be shared across multiple environments
+
+- Expressions are meaningless without respect to an environment. e.g (+ 1 1) the symbol + only means addition in an environment which defines addition (has an inherited context)
+
+** Rules for evaluation
+
+- Shift in viewpoint from substitution model:
+  - variables not name for value but box in which we can store things
+  - procedures not mathematical functions but object with inherited context
+
+- Procedures created by evaluating a lambda expression (see. below)
+- "define" creates definitions by adding bindings to frames
+#+begin_src racket
+(define (square x) (* x x))
+; is the same as
+(define square (lambda (x) (* x x)))
+#+end_src
+- A procedure created by lambda expression relative to a given environment. Resulting procedure consists of "double bubble" (i.e. code in lambda expression and pointer to environment in which it was created)
+
+- Procedure is an object applied to set of arguments by constructing a frame
+  Binding the formal parameters of the procedure to the arguments of the call
+
+- Evaluating the body of the procedure results in the creation of a new environment (i.e. sequence of frames).
+
+- The new frame has (points to) the enclosing environment of the environment for which procedure object is being applied
+
+
+- "defining" symbol creates binding in current environment frame
+- "set!" first locates the first frame with binding of the variable in the environment and changes binding to represent the new value
+  - if variable unbound (i.e. no environment frame binding) it will throw an error
+
+- We use this model for building an interpreter later
+
+** Applying simple procedures
+#+begin_src racket
+#lang sicp
+
+(define (square x) (* x x))
+(define (sum-of-squares x y) (+ (square x) (square y)))
+(define (f a) (sum-of-squares (+ a 1) (* a 2)))
+
+;; global environment has bindings to lambda expressions square, sum-of-squares and f
+
+(f 5)
+;; evaluating a procedure creates new environment (e.g. E1) (points to global)
+;; need to evaluate subexpressions
+;; from E1 (no binding for sum-of-squares found) we move up to global environment
+;; (+ a 1) and (* a 2) subexpression evaluated -> 6 and 10
+;; applying 6 and 10 to proedure sum-of-squares results in new environment (e.g. E2) (points to global)
+;; now evaluate subexpressions
+;; find square in global frame
+;; evaluate first square subexpression results in E3 (points to global)
+;; evaluate second square subexpression results in E4 (points to global)
+;; because we are setting up different environments for each procedure call; we can keep different bindings for variables names resued (e.g. x)
+#+end_src
+
+*** Exercise 3.9
+#+begin_src racket
+(define (factorial n)
+  (if (= n 1)
+      1
+      (* n (factorial (- n 1)))))
+
+;; global environment has bindings to lambda expression factorial
+(factorial 6)
+;; evaluate new procedure results in new environment E1
+;;
+#+end_src
+
+- Replacing substitution model with environment model does not sort out issue of constant spacing. (That is addressed again in Chapter 5)

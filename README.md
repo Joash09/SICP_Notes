@@ -34,7 +34,7 @@ Collection of notes and exercise attempts from working through Structure and Int
     * key to organizing programs is to clearly represent the signal flow structure
     * higher order functions: reduce, accumulate, fold
     * can achieve modularity by treating data as a signal flow structure (e.g. elements from enumerate function can be mapped to a function, the results of which is filtered, and the filtered results get accumulated)
-    
+    * closure: Result of a function taking parameters from set S results in an element also defined in S
     * performance benefits when choosing structure to represent data:
       - unordered lists vs ordered lists vs trees 
       
@@ -55,15 +55,14 @@ Collection of notes and exercise attempts from working through Structure and Int
   * Assignment: 
     - can introduce state with the let keyword
     - set! keyword is for modifying a variable
-    - procedures which act on the variable (with set!) are also defined in let environment
+    - procedures which act on the variable (with set!) are also defined in let procedure "environment"
     - then with messaging-passing; we can modify state of variable accordingly
-    
     - begin procudere is useful for grouping sequences of procedures
-    
   * Benefits of assignment:
     - Great for modelling computational objects whose state changes over time
   * Costs of assignment:
     - With assignments we cannot be sure a procedure with the same arguments to the same function will produce the same result
     - Programming with no assignments is referred to as *functional* programming
     - order of evaluation of subexpressions matter with assigments (i.e. right to left or left to right)
+  * How the environment model works (replacement to substitution model of evaluation)
 
