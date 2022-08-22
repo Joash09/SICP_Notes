@@ -1008,6 +1008,7 @@ Exercise 2.7 and 2.8
 
 
 *** Exercise 2.40: Unique pairs
+
 #+begin_src racket
 #lang sicp
 
@@ -1062,6 +1063,52 @@ Exercise 2.7 and 2.8
 
 #+RESULTS:
 : (3 6 9 12 15)
+
+*** Exercise 2.41: Eight-queens puzzle
+
+#+begin_src racket
+#lang sicp
+
+; TODO complete
+(define empty-board)
+(define (adjoin-position row k rest-of-queens))
+(define (safe? k positions))
+
+; generate (1, 2,...,8) -> map + accumulate -> adjoin-postition new-row 8-1 rest-of-queens -> filter out non-safe positions
+(define (queens board-size)
+  (define (queen-cols k)
+    (if (= k 0)
+        (list empty-board)
+        (filter (lambda (postitions) (safe? k postitions))
+                (flatmap (lambda (rest-of-queens)
+                           (map
+                            (lambda (new-row) (adjoin-position new-row
+                                                               k
+                                                               rest-of-queens))
+                            (enumerate-interval 1 board-sze)))
+                         (queen-cols (- k 1))))))
+  (queen-cols board-size))
+
+#+end_src
+
+** Example: Picture Language
+
+- typically describe a language by means of its primiatives, means of combination and abstractions
+- this exercise only has one property: the *painter*
+- transforms which take a single painter and produce new painter (e.g. flip-vert) highlight the data *closure* property
+- can combine painters with Scheme procedures (so technically won't feature in the picture language)
+
+#+begin_src racket
+#lang sicp
+
+; example of combination
+(define (right-split painter n)
+  (if (= n 0)
+      painter
+      (let ((smaller (right-split painter (- n 1))))
+        (beside painter (below smaller smaller)))))
+
+#+end_src
 
 * Symbolic Data
 
