@@ -38,7 +38,7 @@ Collection of notes and exercise attempts from working through Structure and Int
     * performance benefits when choosing structure to represent data:
       - unordered lists vs ordered lists vs trees 
       
-    * Goals for programs is to have "abstraction barriers"
+    * Goals for program design is to have "abstraction barriers"
       - Abstraction barrier: Isolate the underlying representation of the data objects
       - But consider having different representations of the same data; how will the program know which corresponding procedure to call
     * Dispatching:
@@ -57,12 +57,20 @@ Collection of notes and exercise attempts from working through Structure and Int
     - set! keyword is for modifying a variable
     - procedures which act on the variable (with set!) are also defined in let procedure "environment"
     - then with messaging-passing; we can modify state of variable accordingly
-    - begin procudere is useful for grouping sequences of procedures
+    - begin procedure is useful for grouping sequences of procedures
   * Benefits of assignment:
-    - Great for modelling computational objects whose state changes over time
+    - Great for modeling computational objects whose state changes over time
   * Costs of assignment:
     - With assignments we cannot be sure a procedure with the same arguments to the same function will produce the same result
     - Programming with no assignments is referred to as *functional* programming
-    - order of evaluation of subexpressions matter with assigments (i.e. right to left or left to right)
-  * How the environment model works (replacement to substitution model of evaluation)
+    - order of evaluation of subexpressions matter with assignments (i.e. right to left or left to right)
+  * How the environment model works (replacement to substitution model of evaluation and rigorous method for evaluating code with assignment)
+    - Procedures created by evaluating lambda functions
+    - Every time a lambda function is evaluated, create a new environment frame
+    - Think of lambda functions as a "double bubble"
+      - First bubble pointer to the code body
+      - Second is a pointer to the environment in which it was created
+    - When encountering a variable name that needs to be evaluated, check current environment frame and move up until variable definition is found
+      - If no definition is found, variable name is *unbound*
+    - set! changes the value of a variable binding in environment frame
 
