@@ -3,10 +3,12 @@
 
 * The Elements of Programming
 
-- Mechansisms languages use to create complex ideas:
+- When modeling complex problems, we create "languages" to express those problems.
+- Mechanisms languages use to create complex ideas:
   - Primitive expressions
   - Means of Combination
   - Means of abstraction
+- See Chapter 2 Picture Language and Chapter 3 Simulator Language as examples
 
 - 2 kinds of elements in programming:
   - Procedures
