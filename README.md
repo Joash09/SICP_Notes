@@ -77,4 +77,5 @@ Collection of notes and exercise attempts from working through Structure and Int
     - car of "backbone" pair points to key-value pair
     - cdr of "backbone" pair points to next backbone pair
     - 2d tables are represented with 2 "backbone" chains
+    - *Memoization/tabulation*: increase the performance of algorithms by storing previously calculated values
 
