@@ -505,7 +505,16 @@ How did this code work?
 - We can do something similar with mutable data
  #+begin_src racket
 #lang sicp
-
+(define (cons x y)
+  (define (set-x! v) (set! x v))
+  (define (set-y! v) (set! y v))
+  (define (dispatch m)
+    (cond ((eq? m 'car) x)
+          ((eq? m 'cdr) y)
+          ((eq? m 'set-car!) set-x!)
+          ((eq? m 'set-cdr!) set-y!)
+          (else (error "Undefined operation: CONS" m))))
+  dispatch)
  #+end_src
 - Assignment requires us to modify environment which itself is a mutable data structure
 
@@ -560,3 +569,134 @@ How did this code work?
                ; no need to update rear-ptr since we only look at front-ptr to evaluate if queue is empty
                queue))))
 #+end_src
+
+** Representing Tables
+
+- Keep record of records with identifying keys
+- *headed list*: tables are constructed with a backbone pair which hold dummy key-value pairs
+  - car points to the key-value pair
+  - cdr points to the next "backbone" pair
+- lookup defined by *assoc* operation
+
+- will be useful for meta-circular evaluator
+
+ #+begin_src racket
+#lang sicp
+
+;; recursively search records and return value
+(define (assoc key records)
+  (cond ((null? records) false)
+        ((equal? key (caar records)) (car records)) ; if key equal to key in key-value pair, return "backbone" pair
+        (else (assoc key (cdr records)))))
+
+(define (lookup key table)
+  (let ((record (assoc key (cdr table)))) ; get key-value pair
+    (if record
+        (cdr record) ; return value in key-value pair
+        false)))
+
+(define (insert! key value table)
+  (let ((record (assoc key (cdr table))))
+    (if record
+        (set-cdr! record value) ; update value at key if exists
+        (set-cdr! table (cons (cons key value) (cdr table))))) ; else create key-value pair linked to "backbone" pair connected to the rest of table
+  'ok)
+
+(define (make-table) (list '*table))
+ #+end_src
+
+ #+RESULTS:
+
+*** 2D tables
+
+- 2 keys index each value
+- effectively have 2 "backbone" chains
+
+ #+begin_src racket
+#lang sicp
+
+(define (assoc key records)
+  (cond ((null? records) false)
+        ((equal? key (caar records)) (car records))
+        (else (assoc key (cdr records)))))
+
+(define (lookup key-1 key-2 table)
+  (let ((subtable (assoc key-1 (cdr table))))
+    (if subtable
+        (let ((record (assoc key-2 (cdr subtable))))
+          (if record
+              (cdr record)
+              false))
+        false)))
+
+(define (insert! key-1 key-2 value table)
+  (let ((subtable (assoc key-1 (cdr table))))
+    (if subtable
+        (let ((record (assoc key-2 (cdr subtable))))
+          (if record
+              (set-cdr! record value)
+              (set-cdr! subtable (cons (cons key-2 value) (cdr subtable)))))
+        (set-cdr! table (cons (list key-1 (cons key-2 value)) (cdr table)))))
+  'ok)
+ #+end_src
+
+*** Creating local tables
+
+#+begin_src racket
+#lang sicp
+
+(define (make-table)
+  (let ((local-table (list '*table*)))
+    ;; define lookup procedure
+    ;; define insert! procedure
+    (define (dispatch m)
+      (cond ((eq? m 'lookup) lookup)
+            ((eq? m 'insert!) insert!)
+            (else (error "Unknown operation: TABLE"))))
+    dispatch))
+
+(define my-table (make-table))
+(define get (my-table 'lookup))
+(define put (my-table 'insert!))
+#+end_src
+
+*** Exercise 3.24
+
+#+begin_src racket
+#lang sicp
+
+(define (make-table same-key?)
+
+  (let ((local-table (list '*table*)))
+
+    (define (assoc key records)
+      (cond ((null? records) false)
+            ((same-key? key (caar records) (car records)))
+            (else (assoc (cdr records)))))
+    ;; define lookup
+    ;; define insert!
+    ;; define dispatch
+
+    ))
+
+#+end_src
+
+*** Exercise 3.25
+*** Exercise 3.26
+*** Exercise 3.27
+
+- *Memoization/tabulation*: increase the performance of algorithms by storing previously calculated values
+
+ #+begin_src racket
+#lang sicp
+
+(define (memoize f)
+  (let ((table (make-table)))
+    (lambda (x)
+      (let ((previously-computed-result (lookup x table)))
+        (or previously-computed-result
+            (let ((result (f x)))
+              (insert! x result table)
+              result))))))
+
+ #+end_src

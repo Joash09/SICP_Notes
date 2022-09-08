@@ -73,4 +73,8 @@ Collection of notes and exercise attempts from working through Structure and Int
     - When encountering a variable name that needs to be evaluated, check current environment frame and move up until variable definition is found
       - If no definition is found, variable name is *unbound*
     - set! changes the value of a variable binding in environment frame
+  * Tables are represented with a "backbone" list of pairs
+    - car of "backbone" pair points to key-value pair
+    - cdr of "backbone" pair points to next backbone pair
+    - 2d tables are represented with 2 "backbone" chains
 
