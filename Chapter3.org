@@ -793,10 +793,56 @@ How did this code work?
 
   'ok)
 
+(define (call-each procedures)
+  (if (null? procedures)
+      'done
+      (begin ((car procedures)) ; return top procedure
+             (call-each (cdr procedures))))) ; then recursively call rest of procedures
+
 (define (make-wire)
-  (let ((signal-value 0))))
+
+  ; define local variables; captured by a new environment
+  (let ((signal-value 0) (action-procedures '()))
+
+    (define (set-my-signal! new-value)
+      (if (not (= signal-value new-value))
+          (begin (set! signal-value new-value)
+                 (call-each action-procedures))
+          'done))
+
+    (define (accept-action-procedure! proc)
+      (set! action-procedures (cons proc action-procedures))
+      (proc))
+
+    (define (dispatch m)
+      (cond ((eq? m 'get-signal) signal-value) ; simple value return
+            ((eq? m 'set-signal!) set-my-signal!)
+            ((eq? m 'add-action!) accept-action-procedure)
+            (else (error "Unknown operation: WIRE" m))))
+
+    dispatch))
+
+(define (call-each procedures)
+  (if (null? procedures)
+      'done
+      (begin ((car procedures) ; apply procedure
+              (call-each (cdr procedures))))))
+
+; syntactic sugar. There is no fundamental difference between data and procedures
+(define (get-signal wire) (wire 'get-signal))
+(define (set-signal! wire new-value)
+  ((wire 'set-signal!) new-value))
+(define (add-action! wire action-procedure)
+  ((wire 'add-action!) action-procedure))
+
+;; defining a time deplay with an agenda
 
 #+end_src
 
 - How to simulate time delays
   - Use structure called an *agenda*: organizes time and actions
+
+*** Exercise 3.31
+
+accept-action-procedure! (see make-wire) immediately runs the first proc on make-wire initialization. This is due to ...
+
