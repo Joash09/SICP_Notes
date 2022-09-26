@@ -846,3 +846,73 @@ How did this code work?
 
 accept-action-procedure! (see make-wire) immediately runs the first proc on make-wire initialization. This is due to ...
 
+* Concurrency
+
+- Assignment introduces time
+- Natural objects in the world act concurrently
+- Time is an imposed ordering of events
+
+** Serializing Access
+
+- Serialized procedures: certain collections of procedures that can be run concurrently
+- Useful when used with a single shared resource
+
+ #+begin_src racket
+#lang sicp
+
+(define x 10)
+(parallel-execute
+ (lambda () (set! x (* x x)))
+ (lambda () (set! x (+ x 1))))
+; above produces 5 different outcomes (reading/writing x is interleaved)
+
+(define s (make-serializer))
+(parallel-execute
+ (s (lambda () (set! x (* x x))))
+ (s (lambda () (set! x (+ x 1)))))
+; above produces 2 different outcomes
+ #+end_src
+
+*** Exercise 3.39
+
+#+begin_src racket
+#lang sicp
+
+(define x 10)
+(define s (make-serializer))
+(parallel-execute
+ (lambda () (set! x ((s (lambda () (* x x))))))
+ (s (lambda () (set! x (+ x 1)))))
+
+;; the set! operation is not serialized (i.e. writing to x is not serialized)
+;; options: 101 121 11 (squaring and setting x happens after x is read in second procedure)
+#+end_src
+
+*** Exercise 3.40
+
+#+begin_src racket
+#lang sicp
+
+(define x 10)
+(parallel-execute
+ (lambda () (set! x (* x x)))
+ (lambda () (set! x (* x x x))))
+
+;; Possible options:
+;; 10^5
+;; 100^3
+;; 1000^2
+;; 10*1000
+;; 10*10*100 = 100^2
+#+end_src
+
+*** Exercise 3.41
+
+No. Returning the balance is a single read operation.
+Serializing is useful for concurrent commands making read/write access to shared memory
+
+** Exposing the Serializer
+
+- Using a serializer is straightforward when using a single shared resource
+- When dealing with multiple shared resources it is useful to expose the serializer
+- This comes at the cost of breaking modularity, as the *instance* of the object is now responsible for serialization
