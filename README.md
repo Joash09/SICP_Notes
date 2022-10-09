@@ -78,4 +78,16 @@ Collection of notes and exercise attempts from working through Structure and Int
     - cdr of "backbone" pair points to next backbone pair
     - 2d tables are represented with 2 "backbone" chains
     - *Memoization/tabulation*: increase the performance of algorithms by storing previously calculated values
+    
+  * Concurrency
+  - Serialized procedures: certain collections of procedures *in each serialized set* that can be run concurrently
+  - Useful when used with a single shared resource
+  - When dealing with multiple shared resources it is useful to expose the serializer
+  - This comes at the cost of breaking modularity, as the *instance* of the object is now responsible for serialization
 
+  - Mutex = mutual + exclusion
+  - Any process must test the mutex when attempting to acquire it
+  - must be performed *atomically*: we must ensure when a process acquires the mutex, it must set it to true before any other process checks mutex
+  - how the testing works depends on how system runs concurrent processes
+  - on a sequential processor, we use a time-slicing mechanism that cycles through processes, letting them run for a short time before interrupting it and moving onto the next
+  - multiprocessing computers provide instructions that support atomic operations directly in hardware

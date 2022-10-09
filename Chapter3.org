@@ -836,7 +836,17 @@ How did this code work?
   ((wire 'add-action!) action-procedure))
 
 ;; defining a time deplay with an agenda
-
+; need to define:
+; (make-agenda)
+; (empty-agenda?)
+; (first-agenda-item <agenda>)
+; (remove-first-agenda-item! <agenda>)
+; (add-to-agenda! <time> <action> <agenda>)
+; (current-time <agenda>)
+(define (make-agenda) (list 0))
+(define (current-time agenda) (car agenda))
+(define (set-current-time! agenda time)
+  (set-car! agenda time))
 #+end_src
 
 - How to simulate time delays
@@ -854,8 +864,7 @@ accept-action-procedure! (see make-wire) immediately runs the first proc on make
 
 ** Serializing Access
 
-- Serialized procedures: certain collections of procedures that can be run concurrently
-- Useful when used with a single shared resource
+- Serialized procedures: certain collections of procedures *in each serialized set* that can be run concurrently
 
  #+begin_src racket
 #lang sicp
@@ -870,8 +879,34 @@ accept-action-procedure! (see make-wire) immediately runs the first proc on make
 (parallel-execute
  (s (lambda () (set! x (* x x))))
  (s (lambda () (set! x (+ x 1)))))
-; above produces 2 different outcomes
+; above produces 2 different outcomes. the read/writes within the serialized set are sequential
  #+end_src
+
+- Useful when used with a single shared resource
+#+begin_src racket
+#lang sicp
+
+(define (make-account balance)
+
+        (define (withdraw amount)
+          (if (>= balance amount)
+              (begin (set! balance (- balance amount))
+                     balance)
+              "Insufficient funds"))
+
+        (define (deposit amount)
+          (set! balance (+ balance amount))
+          balance)
+
+        (let ((s (make-serializer)))
+          (define (dispatch m)
+            (cond ((eq? m 'withdraw) (s withdraw)) ; steps within withdraw are serialized; another concurrent withdraw/deposit won't change balance until 1st withdraw done
+                  ((eq? m 'deposit) (s deposit)) ; steps within deposit are serialized
+                  ((eq? m 'balance) balance)
+                  (else (error "Unknown request: MAKE-ACCOUNT" m))))
+          dispatch))
+
+#+end_src
 
 *** Exercise 3.39
 
@@ -911,8 +946,218 @@ accept-action-procedure! (see make-wire) immediately runs the first proc on make
 No. Returning the balance is a single read operation.
 Serializing is useful for concurrent commands making read/write access to shared memory
 
+*** Exercise 3.42
+
+Initially calling withdraw/deposit, we add the procedure to already initialized serializer set. Now withdraw/deposit procedures are already serialized on initialization. Now we are not adding procedures to serializer set but instead calling procedures already belonging to the serializer set. Change is safe to make.✔
+
+
+** Complexity of multiple shared resources
+
+ #+begin_src racket
+#lang sicp
+
+;; consider exchange a1 andn a2 and another process a1 and a3
+;; even though widthdraw and deposit serialized
+;; a second process could calculate difference before 1st exchange is done
+;; producing incorrect results
+(define (exchange account1 account2)
+  (let ((difference (- (account1 'balance)
+                       (account2 'balance))))
+    ((account1 'widthdraw) difference)
+    ((account2 'deposit) difference)))
+
+#+end_src
+
 ** Exposing the Serializer
 
 - Using a serializer is straightforward when using a single shared resource
 - When dealing with multiple shared resources it is useful to expose the serializer
+- In the following example, we are performing an exhange operation between 2 bank accounts (multiple shared resources)
+- By exposing serializer, we can use *both* accounts' serializer to serialize the entire operation
 - This comes at the cost of breaking modularity, as the *instance* of the object is now responsible for serialization
+
+ #+begin_src racket
+(define (make-account-and-serializer balance)
+
+  (define (withdraw amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount))
+               balance)
+        "Insufficient funds"))
+
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    balance)
+
+  (let ((balance-serializer (make-serializer)))
+    (define (dispatch m)
+      (cond ((eq? m 'withdraw) withdraw) ; note not serialized. see ex 3.45
+            ((eq? m 'deposit) deposit) ; note not serialized
+            ((eq? m 'balance) balance)
+            ((eq? m 'serializer) balance-serializer) ; return local serializer
+            (else (error "Unknown request: MAKE-ACCOUNT" m))))
+    dispatch))
+
+(define (deposit account amount)
+  (let ((s (account 'serializer))
+        (d (account 'deposit)))
+    ((s d) amount))) ; serialize depositing an amount
+
+(define (exchange account1 account2) ; still defined as before
+  (let ((difference (- (account1 'balance)
+                       (account2 'balance))))
+    ((account1 'widthdraw) difference)
+    ((account2 'deposit) difference)))
+
+; solving the problem of concurrently exchanging a1 and a2 and exchaning a1 and a3
+; one transaction may change a1 balance before other transaction finishes
+(define (serialized-exchange account1 account2)
+  (let ((serializer1 (account1 'serializer))
+        (serializer2 (account2 'serializer)))
+    ((serializer1 (serializer2 exhange)) account1 account2))) ; combining serializers to serialize the entire operation
+ #+end_src
+
+*** Exercise 3.43
+
+
+*** Exercise 3.44
+
+In the exchange problem, we needed to read from both accounts a1 and a2 (multiple shared resource access).
+
+In the transfer problem, the operation on "from-account" is independent to "to-account." Hence, more sophisticated serialization is not required assuming account's withdraw and deposit procedures are serialized internally.
+✔
+
+*** Exercise 3.45
+
+Why didn't we serialize withdraw and deposit procedures when exposing bank account serializer?
+
+An operation like serialized-exchange includes withdraw and deposit procedure calls. Internally serialized withdraw and deposit procedures result in nested additions to the same serializer set.
+
+Run into an issue where steps within serialized-exchange call withdraw/deposit but withdraw/deposit are waiting for serialized-exchange to complete.
+✔
+
+** Implementing serializers
+
+- Mutex = mutual + exclusion
+- Has 2 operations:
+  - Acquire: Once acquired no other acquire operations on that mutex
+  - release
+- Variant of *semaphore*
+
+- Mutex is a one element cell with boolean value
+- Any process must test the mutex when attempting to acquire it
+  - If false; loop testing it over and over again
+  - If true; acquire it
+- releasing mutex is setting contents to false
+- must be performed *atomically*: we must ensure when a process acquires the mutex, it must set it to true before any other process checks mutex
+  - otherwise we have the same concurrency issue as before
+- how the testing works depends on how system runs concurrent processes
+- on a sequential processor, we use a time-slicing mechanism that cycles through processes, letting them run for a short time before interrupting it and moving onto the next
+- multiprocessing computers provide instructions that support atomic operations directly in hardware
+  - in the case two processes request mutex in exactly the same time; an *arbiter* (hardware device) must decide. It is not possible to make a completely fair arbiter
+
+#+begin_src racket
+#lang sicp
+
+(define (make-mutex)
+  (let ((cell (list false)))
+    (define (the-mutex m)
+      (cond ((eq? m 'acquire)
+             (if (test-and-set! cell)
+                 (the-mutex 'acquire))) ; retry
+            ((eq? m 'release) (clear! cell))))
+    the-mutex))
+
+; we must ensure when a process acquires the mutex, it must set it to true before any other process checks mutex
+;; following will not suffice
+;; (define (test-and-set! cell)
+;;   (if (car cell)
+;;       true
+;;       (begin (set-car! cell true)
+;;              false)))
+(define (test-and-set! cell)
+  (without-interrupts ;; disables time-slicing interrupts whilst procedure is running
+   ; ensures another process does not read mutex whilst another process is acquiring it
+   ; specifically for sequential computer
+   (lambda ()
+     (if (car cell)
+         true
+         (begin (set-cdr! cell true)
+                false)))))
+
+(define (clear! cell) (set-car! cell false))
+
+(define (make-serializer)
+  (let ((mutex (make-mutex)))
+    (lambda (p)
+      (define (serialized-p . args)
+        (mutex 'aquire)
+        (let ((val (apply p args)))
+          (mutex 'release)
+          val))
+      serialized-p)))
+#+end_src
+
+** Deadlock
+
+- Process 1 attempts to exchange a1 and a2
+- Concurrently Process 2 exchange a2 and a1
+- P1 acquires lock on a1
+- P2 acquires lock on a2
+- P1 waits for P2 to release a2
+- P2 waits for P1 to release a1
+
+- Avoid deadlock with a unique identification number and always protect account with the lowest-number account first
+- More sophisticated techniques for different types of problems. See "deadlock-recovery" methods
+
+*** Exercise 3.48
+
+- Avoid deadlock by first acquiring the lowest account number first
+- Process 1 attempts to exchange a1 and a2
+- Concurrently Process 2 exchange a2 and a1
+- P1 acquires lock on a1 (lowest number)
+- P2 will try to acquire lock on a1 (lowest number)
+- P2 will wait for a1 to be freed by P1
+
+#+begin_src racket
+(define (make-account-and-serializer account-number balance)
+
+  (define (withdraw amount)
+    (if (>= balance amount)
+        (begin (set! balance (- balance amount))
+               balance)
+        "Insufficient funds"))
+
+  (define (deposit amount)
+    (set! balance (+ balance amount))
+    balance)
+
+  (let ((balance-serializer (make-serializer))
+        (account-number account-number))
+    (define (dispatch m)
+      (cond ((eq? m 'withdraw) withdraw) ; note not serialized. see ex 3.45
+            ((eq? m 'deposit) deposit) ; note not serialized
+            ((eq? m 'balance) balance)
+            ((eq? m 'account-number) account-number)
+            ((eq? m 'serializer) balance-serializer) ; return local serializer
+            (else (error "Unknown request: MAKE-ACCOUNT" m))))
+    dispatch))
+
+(define (exchange account1 account2) ; still defined as before
+  (let ((difference (- (account1 'balance)
+                       (account2 'balance))))
+    ((account1 'widthdraw) difference)
+    ((account2 'deposit) difference)))
+
+; solving the problem of concurrently exchanging a1 and a2 and exchaning a1 and a3
+; one transaction may change a1 balance before other transaction finishes
+; acquire lowest number account first to prevent deadlock
+(define (serialized-exchange account1 account2)
+  (let ((serializer1 (account1 'serializer))
+        (serializer2 (account2 'serializer)))
+    (if (> (account1 'account-number) (account2 'account-number))
+        ((serializer2 (serializer1 exchange)) account1 account2)
+        ((serializer1 (serializer2 exhange)) account1 account2)))); combining serializers to serialize the entire operation
+#+end_src
+
+*** Exercise 3.49
