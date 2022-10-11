@@ -972,7 +972,7 @@ Initially calling withdraw/deposit, we add the procedure to already initialized 
 
 - Using a serializer is straightforward when using a single shared resource
 - When dealing with multiple shared resources it is useful to expose the serializer
-- In the following example, we are performing an exhange operation between 2 bank accounts (multiple shared resources)
+- In the following example, we are performing an exchange operation between 2 bank accounts (multiple shared resources)
 - By exposing serializer, we can use *both* accounts' serializer to serialize the entire operation
 - This comes at the cost of breaking modularity, as the *instance* of the object is now responsible for serialization
 
@@ -1161,3 +1161,224 @@ Run into an issue where steps within serialized-exchange call withdraw/deposit b
 #+end_src
 
 *** Exercise 3.49
+
+** Closing
+
+- Introducing state means we are concerned about the synchronizations of events
+- Intriguing connection between communication and time arises in the Theory of Relativity
+
+* Streams
+
+- If we consider state as a function, no longer emphasize change (function does not change)
+- Data which changes over time could be modeled as *streams*
+- Streams allow us to model state without assignment
+
+** Streams as delayed lists
+
+- Previously looked at modularity with functions
+- Inefficient to be copying large data structures (typically lists) at every step in flow
+- Streams combine iterative approach and procedures as signals approach
+
+- Idea is to construct stream only partly
+- Preserve the illusion entire stream exists
+- Same as list otherwise
+
+- Similar to implementation of rational numbers (simplification can happen at construction or selection); cdr operations of a stream happen at selection time
+- *deplay*: special form that "promises" to return object later
+- *force*: special form forcing stream to fulfill promise
+
+- *Delayed driven* programming aka "demand driven" programming
+
+ #+begin_src racket
+#lang sicp
+
+; (delay <exp>) -> returns some "promise" object
+; (delay <exp>) --> syntactic sugar for (lambda () <exp>)
+
+; (cons <a> (delay <b>)) ; cannot convert this to a procedure as it would automatically cause <b> to be evaluated
+(define (stream-car stream) (car stream))
+(define (stream-cdr stream) (force (cdr stream)))
+(define (force delayed-object) (delayed-object))
+
+(define (memo-proc proc)
+  (let ((already-run? false) (result false))
+    (lambda ()
+      (if (not already-run?)
+          (begin (set! result (proc))
+                 (set! already-run? true)
+                 result)
+          result))))
+
+(define (stream-ref s n)
+  (if (= n 0)
+      (stream-car s)
+      (stream-ref (stream-cdr s) (- n 1))))
+
+;; recursively apply process to first element
+(define (stream-map proc s)
+  (if (stream-null? s)
+      the-empty-stream
+      (cons (proc (stream-car s)) (stream-map proc (stream-cdr s)))))
+
+(define (stream-for-each proc s)
+  (if (stream-null? s)
+      'done
+      (begin (proc (stream-car s))
+             (stream-for-each proc (stream-cdr s)))))
+
+(define (display-line x) (newline) (display x))
+(define (display-stream s)
+  (stream-for-each-display display-line s))
+
+#+end_src
+
+- Streams in action
+
+#+begin_src racket
+#lang sicp
+
+; stream-enumerate-interval returns (cons 10000 (delay (stream-enumerate-interval 10001 100000)))
+; car is 10000
+; promises to find the rest of interval if requested
+; next promise (cons 10001 (delay (stream-enumerate-interval 10002 100000)))
+(define (stream-enumerate-interval low high)
+  (if (> low high)
+      the-empty-stream
+      (cons-stream low (stream-enumerate-interval (+ low 1) high))))
+
+(define (stream-filter pred stream)
+  (cond ((stream-null? stream) the-empty-stream)
+        ((pred (stream-car stream)) ; if true return car + filter rest
+         (cons-stream (stream-car stream)
+                      (stream-filter pred (stream-cdr stream))))
+        (else (stream-filter pred (stream-cdr stream))))) ; else just filter rest
+
+(stream-car
+ (stream-cdr
+  (stream-filter prime? (stream-enumerate-interval 10000 100000))))
+
+; stream-enumerate-interal -> (cons 10000 (delay (stream-enumerate-interval 10001 100000)))
+; stream-filter -> tests 10000 (not prime) then calls stream-filter pred (stream-cdr stream)
+; (stream-cdr stream) -> (cons 10001 (delay (stream-enumerate-interval 10002 100000)))
+; carry on until (stream-car stream) -> 10007
+; this is passed to stream-cdr which forces (stream-filter ... ) again
+; until (stream-car stream) -> 10009
+; which is passed to stream-car (returns 10009) and completes
+; hence we only generated and tested numbers 10000 to 10009
+#+end_src
+
+** Implementing delay and force
+
+
+
+*** Exercise 3.50
+
+#+begin_src racket
+#lang sicp
+
+; multiple list
+; if no more lists return null
+; else
+; construct pair with
+; apply proc on all elements of one the lists
+; and apply proc on the rest of the lists
+(define (stream-map proc . argstreams) ; argstreams is a list not stream
+  (if (null? (car argstreams))
+      the-empty-stream
+      (stream-cons
+       (apply proc (map (car argstreams)))
+       (apply stream-map (cons proc (map (cdr argstreams)))))))
+#+end_src
+
+*** Exercise 3.51
+
+** Infinite Streams
+
+- We can represent streams that are infinity long; but we will only evaluate a finite portion of the stream
+
+ #+begin_src racket
+#lang sicp
+
+(define (integers-starting-from n)
+  (cons-stream n (integers-starting-from (+ n 1))))
+(define integers (integers-starting-from 1)) ; produces 1 and promise to produce integers at 2
+
+; integers will go infinitly but we are only evaluating a finite number of integers
+
+(define (divisible? x y) (= (remainder x y) 0))
+
+(define no-sevens
+  (stream-filter (lambda (x) (not (divisible? x 7))) integers))
+
+(stream-ref no-sevens 100)
+ #+end_src
+
+** Defining streams implicitly
+
+- Recursive way to define streams...
+
+#+begin_src racket
+#lang racket
+
+(define ones (stream-cons 1 ones))
+; returns:
+; car ones -> 1
+; cdr ones -> promise for the rest of ones
+
+;; ==================================================================
+(define (stream-map proc . argstreams)
+  (if (null? (car argstreams))
+      empty-stream
+      (stream-cons
+       (apply proc (map (car argstreams)))
+       (apply stream-map (cons proc (map (cdr argstreams)))))))
+
+(define (add-streams s1 s2) (stream-map + s1 s2)) ; see exercise 3.50
+;; ==================================================================
+
+(define integers
+  (stream-cons 1 (add-streams ones integers)))
+; 1 + first element of integers = 2
+; 1 + second element of integers = 3
+; 1 + third element of integers = 4 ...
+
+;; ==================================================================
+(define fibs
+  (stream-cons 0 (stream-cons 1 (add-streams (stream-cdr fibs) fibs))))
+; add cdr fibs (next element in fibs) to current element in fibs
+
+;; ==================================================================
+(define (scale-stream stream factor)
+  (stream-map (lambda () (* x factor)) stream)
+#+end_src
+
+#+RESULTS:
+
+*** Exercise 3.53
+#+begin_src racket
+#lang racket
+
+(define s (stream-cons 1 (add-streams s s)))
+; creates a stream where the next element is double the previous one (i.e. x2)
+#+end_src
+
+*** Exercise 5.54
+#+begin_src racket
+#lang racket
+
+(define (stream-map proc . argstreams)
+  (if (null? (car argstreams))
+      empty-stream
+      (stream-cons
+       (apply proc (map (car argstreams)))
+       (apply stream-map (cons proc (map (cdr argstreams)))))))
+
+(define (add-streams s1 s2) (stream-map + s1 s2))
+(define (mul-streams s1 s2) (stream-map * s1 s2))
+
+(define ones (stream-cons 1 ones))
+(define integers
+  (stream-cons 1 (add-streams ones integers)))
+(define factorial
+  (stream-cons 1 (mul-streams (cdr integers) integers)))
+#+end_src
