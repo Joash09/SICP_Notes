@@ -1,0 +1,110 @@
+#+title: Chapter4
+
+- When modeling complex problems, we create "languages" to express those problems.
+- Mechanisms languages use to create complex ideas:
+  - Primitive expressions
+  - Means of Combination
+  - Means of abstraction
+
+- In electrical engineering we have different "languages" to describe circuits.
+  - networks talk transistors, opamps etc.
+  - systems talk of filters, multipliers etc.
+- Similarly for programming languages
+  - Concerned with:
+    - representation of data
+    - control bits and primitive machine instructions
+
+- *Metalinguistic abstraction*: establishing new languages (primitive expressions, means of combination and abstraction)
+- "The evaluator which determines the meaning of expressions in a programming language is just another program"
+- Chapter will explore creating an evaluator written in Lisp[Scheme] (evaluator represents a subset of Scheme)
+  - We can gain extra control over computational models such as streams (change from applicative order to normal order)
+  - Lisp is useful because it can represent and evaluate symbolic expressions
+
+* The metacircular evaluator
+
+- Evaluator written in the same language it evaluates
+- Evaluator is a formation of environment model:
+  - evaluate combination (compound expression)
+  - evaluate subexpressions
+  - apply value of
+  - evaluate body of procedure in new environment
+
+
+- If we use same primitives in "our" evaluator already described in Scheme, what else is there to do?
+- The evaluator is not about describing primitives. It is about providing the means of combination and abstraction
+
+  - (+ 1 (* 2 3)) -> (* 2 3) must be evaluated before + primitive operator. Describing + and * primitives alone wouldn't have been sufficient. Evaluator ensures subexpressions evaluated first
+
+  - (+ x 1) Evaluator allows us to use variables. + primitive alone is not sufficient
+
+  - Evaluator allows for compound procedures
+
+  - Evaluator provides special forms; different to procedure calls
+
+** Evaluator Core
+
+- Eval structured as a case analysis
+  - Primitive expressions
+    - self evaluating expressions return itself
+    - look up variables
+  - Special forms
+    - quoted expressions
+    - assignment of variable, environment must be modified
+    - if expressions
+    - lambda expression
+    - begin
+    - case analysis (nested if expressions)
+  - Combinations
+    - recursively evaluate operator
+
+#+begin_src racket
+#lang sicp
+
+;; rough pseudo code
+;; can be rewritten with dispatch (data-directed style)
+(define (eval exp env)
+  (cond ((self-evaluating? exp) exp)
+        ((variable? exp) (lookup-variable-value exp env))
+        ((quoted? exp) (text-of-quotation exp))
+        ((assignment? exp) (eval-assignment exp env))
+        ((definition? exp) (eval-definition exp env))
+        ((if? exp) (eval-if exp env))
+        ((lambda? exp) (make-procedure (lambda-parameters exp)
+                                       (lambda-body exp)
+                                       env))
+        ((begin? exp) (eval-sequence (begin-actions exp) env))
+        ((cond? exp) (eval (cond->if exp) env))
+        ((application? exp) (apply (eval (operator exp) env)
+                                   (list-of-values (operands exp) env)))
+        (else (error "Unknown expression type: EVAL" exp))))
+
+(define (apply procedure arguments)
+  (cond ((primitive-procedure? procedure)
+         (apply-primitive-procedure procedure arguments))
+        ((compound-procedure? procedure) ; environment model
+         (eval-sequence (procedure-body procedure)
+                        (extend-environment (procedure-parameters)
+                                            arguments
+                                            (procedure-environment procedure))))
+        (else (error "Unknown procedure type: APPLY" procedure))))
+
+;; Eval-squence
+(define (eval-sequence exps env)
+  (cond ((last-exp? exps) (eval (first-exp exps) env))
+        (else (eval (first-exp exps) env)
+              (eval-sequence (rest-exps exps) env))))
+
+;; Procedure arguments (application?)
+(define (list-of-values exps env)
+  (if (no-operands? exps)
+      '()
+      (cons (eval (first-operand exps) env)
+            (list-of-values (rest-operands exps) env))))
+
+;; Conditionals
+; how we implement it may not be the same as in implementation of Scheme
+(define (eval-if exp env)
+  (if (true? (eval (if-predicate exp) env))
+      (eval (if-consequent exp) env)
+      (eval (if-alternate exp) env)))
+#+end_src
